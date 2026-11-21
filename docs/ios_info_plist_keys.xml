@@ -1,0 +1,31 @@
+<!--
+  Add these keys inside the top-level <dict> of ios/Runner/Info.plist
+  (after running `flutter create .`).
+-->
+<key>CFBundleDisplayName</key>
+<string>BCC Chat</string>
+
+<key>NSCameraUsageDescription</key>
+<string>BCC Chat uses the camera for video calls, photos and stories.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>BCC Chat uses the microphone for calls and voice messages.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>BCC Chat lets you share photos and videos from your library.</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>BCC Chat shares your location only when you choose to send it.</string>
+<key>NSContactsUsageDescription</key>
+<string>BCC Chat checks your contacts to show which friends already use the app.</string>
+
+<key>UIBackgroundModes</key>
+<array>
+  <string>audio</string>
+  <string>voip</string>
+  <string>remote-notification</string>
+  <string>fetch</string>
+</array>
+
+<key>LSApplicationQueriesSchemes</key>
+<array>
+  <string>https</string>
+  <string>comgooglemaps</string>
+</array>

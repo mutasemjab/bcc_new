@@ -1,0 +1,37 @@
+rules_version = '2';
+
+// BCC Chat — Cloud Storage rules (uses cross-service Firestore lookups).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function isImage() { return request.resource.contentType.matches('image/.*'); }
+    function under(mb) { return request.resource.size < mb * 1024 * 1024; }
+
+    match /avatars/{userId}/{file} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId && isImage() && under(10);
+    }
+
+    match /groups/{chatId}/{file} {
+      allow read: if signedIn();
+      // The group doc may not exist yet while it is being created.
+      allow write: if signedIn() && isImage() && under(10);
+    }
+
+    match /statuses/{userId}/{file} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == userId && isImage() && under(15);
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /chats/{chatId}/{file} {
+      function isParticipant() {
+        return request.auth.uid in
+          firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participants;
+      }
+      allow read: if signedIn() && isParticipant();
+      allow create, update: if signedIn() && isParticipant() && under(100);
+      allow delete: if signedIn() && isParticipant();
+    }
+  }
+}

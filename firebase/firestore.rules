@@ -1,0 +1,257 @@
+rules_version = '2';
+
+// BCC Chat — Firestore security rules.
+// Every read/write is checked server-side; the client is never trusted.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function changedKeys() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function onlyChanges(keys) { return changedKeys().hasOnly(keys); }
+
+    // True if either user has blocked the other.
+    function blockedBetween(a, b) {
+      return exists(/databases/$(database)/documents/users/$(a)/blocked/$(b))
+          || exists(/databases/$(database)/documents/users/$(b)/blocked/$(a));
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && uid() == userId
+        && request.resource.data.get('name', '').size() <= 40
+        // A profile phone must be the SMS-verified number of this account
+        // (so nobody can claim someone else's number).
+        && (request.resource.data.get('phone', null) == null
+            || request.resource.data.phone == request.auth.token.get('phone_number', '')
+            || (resource != null && request.resource.data.phone == resource.data.get('phone', null)));
+      allow delete: if false;
+
+      // Messages scheduled for later — private to their author.
+      match /scheduled/{scheduledId} {
+        allow read, write: if signedIn() && uid() == userId;
+      }
+
+      // My block list — only I can see or change it.
+      match /blocked/{blockedId} {
+        allow read, write: if signedIn() && uid() == userId;
+      }
+    }
+
+    // ── Presence (online / last seen) ─────────────────────────────────
+    // Hidden from anyone this user has blocked. Values the user chose to hide
+    // are simply never written.
+    match /presence/{userId} {
+      allow read: if signedIn()
+        && !exists(/databases/$(database)/documents/users/$(userId)/blocked/$(uid()));
+      allow write: if signedIn() && uid() == userId;
+    }
+
+    // ── Chats (1:1 and groups) ─────────────────────────────────────────
+    match /chats/{chatId} {
+      function isMember() { return uid() in resource.data.participants; }
+      function isAdmin() { return uid() in resource.data.get('admins', []); }
+      function isGroup() { return resource.data.get('isGroup', false) == true; }
+
+      function validDirectCreate() {
+        let p = request.resource.data.participants;
+        return request.resource.data.get('isGroup', false) == false
+          && p.size() == 2
+          && chatId in [p[0] + '_' + p[1], p[1] + '_' + p[0]];
+      }
+
+      function validGroupCreate() {
+        let d = request.resource.data;
+        return d.isGroup == true
+          && d.createdBy == uid()
+          && d.admins == [uid()]
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 60
+          && d.participants.size() <= 256;
+      }
+
+      // Sending messages, typing, read receipts, pin, mute.
+      function memberActivity() {
+        return request.resource.data.participants == resource.data.participants
+          && onlyChanges(['lastMessage', 'updatedAt', 'unread', 'typing', 'pinnedBy', 'mutedBy', 'pinnedMessages',
+                          'clearedAt', 'deletedAt'])
+          // "Clear chat" / "Delete chat" only ever touch my own entry.
+          && ownKeyOnly('clearedAt') && ownKeyOnly('deletedAt');
+      }
+
+      function adminEdit() {
+        return isGroup() && isAdmin()
+          && onlyChanges(['name', 'description', 'photoUrl', 'participants', 'admins', 'unread', 'lastMessage', 'updatedAt',
+                         'invited', 'invitedBy', 'inviteCode']);
+      }
+
+      // A member removing only themself; admin rights pass on if needed.
+      function leaving() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let remainingAdmins = before.get('admins', []).toSet().difference([uid()].toSet());
+        return isGroup()
+          && after.participants.toSet() == before.participants.toSet().difference([uid()].toSet())
+          && (remainingAdmins.size() > 0
+                ? after.admins.toSet() == remainingAdmins
+                : after.admins.size() <= 1 && after.participants.toSet().hasAll(after.admins.toSet()))
+          && onlyChanges(['participants', 'admins', 'lastMessage', 'updatedAt']);
+      }
+
+      // A map field where only the caller's own key may change.
+      function ownKeyOnly(field) {
+        return request.resource.data.get(field, {}).diff(resource.data.get(field, {})).affectedKeys().hasOnly([uid()]);
+      }
+
+      // The caller adds only themself as a member (never anyone else, never admin).
+      function addsOnlySelf() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return after.participants.toSet() == before.participants.toSet().union([uid()].toSet())
+          && after.get('invited', []).toSet() == before.get('invited', []).toSet().difference([uid()].toSet())
+          && after.get('admins', []) == before.get('admins', [])
+          && ownKeyOnly('anonymous') && ownKeyOnly('invitedBy') && ownKeyOnly('unread');
+      }
+
+      // Invitee accepts (optionally anonymously).
+      function acceptingInvite() {
+        return isGroup() && uid() in resource.data.get('invited', []) && addsOnlySelf()
+          && onlyChanges(['participants', 'invited', 'invitedBy', 'unread', 'anonymous', 'lastMessage', 'updatedAt']);
+      }
+
+      // Anyone holding the current join-link code may join.
+      function joiningWithLink() {
+        return isGroup() && resource.data.get('inviteCode', '') != ''
+          && request.resource.data.get('joinCode', '') == resource.data.inviteCode
+          && !(uid() in resource.data.participants) && addsOnlySelf()
+          && onlyChanges(['participants', 'invited', 'invitedBy', 'unread', 'anonymous', 'lastMessage', 'updatedAt', 'joinCode']);
+      }
+
+      function decliningInvite() {
+        return uid() in resource.data.get('invited', [])
+          && request.resource.data.get('invited', []).toSet() == resource.data.get('invited', []).toSet().difference([uid()].toSet())
+          && ownKeyOnly('invitedBy')
+          && onlyChanges(['invited', 'invitedBy']);
+      }
+
+      // Reveal: stamps revealedAt with the server time.
+      // Hide again: only when 24 hours have passed since the last reveal.
+      function changingIdentity() {
+        let wasAnon = uid() in resource.data.get('anonymous', {});
+        let nowAnon = uid() in request.resource.data.get('anonymous', {});
+        let revealed = resource.data.get('revealedAt', {});
+        return isGroup() && ownKeyOnly('anonymous') && ownKeyOnly('revealedAt')
+          && onlyChanges(['anonymous', 'revealedAt', 'lastMessage', 'updatedAt'])
+          && (
+            (wasAnon && !nowAnon && request.resource.data.revealedAt[uid()] == request.time)
+            || (!wasAnon && nowAnon
+                && !changedKeys().hasAny(['revealedAt'])
+                && (!(uid() in revealed) || request.time > revealed[uid()] + duration.value(24, 'h')))
+          );
+      }
+
+      // Plain field access so the "my invitations" query (array-contains) is provable.
+      allow read: if signedIn() && (resource == null || isMember() || uid() in resource.data.invited);
+      allow create: if signedIn()
+        && uid() in request.resource.data.participants
+        && (validDirectCreate() || validGroupCreate());
+      allow update: if signedIn() && (
+        (isMember() && (memberActivity() || adminEdit() || leaving() || changingIdentity()))
+        || acceptingInvite() || decliningInvite() || joiningWithLink()
+      );
+      allow delete: if false;
+
+      // ── Messages ─────────────────────────────────────────────────────
+      match /messages/{messageId} {
+        function chatPath() { return /databases/$(database)/documents/chats/$(chatId); }
+        function member() { return signedIn() && uid() in get(chatPath()).data.participants; }
+
+        allow read: if member();
+
+        // getAfter: the chat may be created in the same batch.
+        // get: a member leaving a group posts the "X left" notice.
+        // 1:1 chat ids are "uidA_uidB": nobody can message across a block.
+        function directBlocked() {
+          let ids = chatId.split('_');
+          return ids.size() == 2 && blockedBetween(ids[0], ids[1]);
+        }
+
+        allow create: if signedIn()
+          && request.resource.data.senderId == uid()
+          && (uid() in getAfter(chatPath()).data.participants || uid() in get(chatPath()).data.participants)
+          && request.resource.data.get('text', '').size() <= 4096
+          && !directBlocked();
+
+        // Delete for everyone: within 2 hours. Edit text: within 15 minutes.
+        function senderChangeAllowed() {
+          let deleting = request.resource.data.get('deletedForEveryone', false) == true
+                      && resource.data.get('deletedForEveryone', false) == false;
+          return deleting
+            ? request.time < resource.data.createdAt + duration.value(2, 'h')
+            : (!changedKeys().hasAny(['text']) || request.time < resource.data.createdAt + duration.value(15, 'm'));
+        }
+
+        allow update: if member() && (
+          // Sender: edit or delete for everyone.
+          (resource.data.senderId == uid()
+             && request.resource.data.senderId == resource.data.senderId
+             && request.resource.data.type == resource.data.type
+             && senderChangeAllowed())
+          // Anyone in the chat: receipts, reactions, delete-for-me.
+          || onlyChanges(['readBy', 'deliveredTo', 'reactions', 'deletedFor'])
+          // Anyone in the chat: vote on a poll (only their own entry).
+          || (resource.data.type == 'poll'
+              && onlyChanges(['pollVotes'])
+              && request.resource.data.get('pollVotes', {}).diff(resource.data.get('pollVotes', {})).affectedKeys().hasOnly([uid()]))
+          // Anyone in the chat: mark a view-once message as opened (only themself).
+          || (resource.data.get('viewOnce', false) == true
+              && onlyChanges(['openedBy'])
+              && request.resource.data.openedBy.toSet().difference(resource.data.get('openedBy', []).toSet()) == [uid()].toSet())
+        );
+        allow delete: if false;
+      }
+    }
+
+    // ── Group join links ──────────────────────────────────────────────
+    // The code is unguessable, so knowing it is what grants the preview.
+    match /groupInvites/{code} {
+      function adminOf(cid) {
+        return uid() in get(/databases/$(database)/documents/chats/$(cid)).data.get('admins', []);
+      }
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && adminOf(request.resource.data.chatId);
+      allow delete: if signedIn() && adminOf(resource.data.chatId);
+    }
+
+    // ── Stories ────────────────────────────────────────────────────────
+    match /statuses/{statusId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == uid()
+        && request.resource.data.type in ['text', 'image'];
+      allow update: if signedIn() && (
+        resource.data.userId == uid()
+        || (onlyChanges(['viewers'])
+            && request.resource.data.viewers.toSet().difference(resource.data.viewers.toSet()) == [uid()].toSet())
+      );
+      allow delete: if signedIn() && resource.data.userId == uid();
+    }
+
+    // ── Calls (signalling) ─────────────────────────────────────────────
+    match /calls/{callId} {
+      allow read: if signedIn() && uid() in resource.data.participants;
+      allow create: if signedIn()
+        && request.resource.data.callerId == uid()
+        && uid() in request.resource.data.participants
+        && request.resource.data.status == 'ringing'
+        && (request.resource.data.get('isGroup', false) == true
+            || request.resource.data.participants.size() != 2
+            || !blockedBetween(request.resource.data.participants[0], request.resource.data.participants[1]));
+      allow update: if signedIn()
+        && uid() in resource.data.participants
+        && onlyChanges(['joined', 'declined', 'status', 'startedAt', 'endedAt']);
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.iml
+.idea/
+.vscode/
+
+# Firebase
+functions/node_modules/
+.firebase/
+firebase-debug.log
+google-services.json
+GoogleService-Info.plist
+
+# Secrets
+*.env

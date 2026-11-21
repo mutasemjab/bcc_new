@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bccchat.ammar",
+      "sha256_cert_fingerprints": [
+        "79:39:D5:12:C0:0A:C7:6B:2B:83:77:7D:AB:A4:64:68:27:3C:4A:E7:8C:C4:30:31:18:69:21:2A:B4:B6:78:AD"
+      ]
+    }
+  }
+]
