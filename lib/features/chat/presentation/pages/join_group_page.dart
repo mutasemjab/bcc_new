@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/di.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/id_utils.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -62,15 +61,10 @@ class _JoinGroupPageState extends State<JoinGroupPage> {
     final preview = _preview;
     if (session is! SessionAuthenticated || preview == null) return;
     final me = session.user;
-    final choice = await showJoinIdentitySheet(
-      context,
-      groupName: preview.name,
-      myName: me.name,
-      myPhotoUrl: me.photoUrl,
-    );
+    final choice = await chooseJoinIdentity(context, groupName: preview.name, myName: me.name, myPhotoUrl: me.photoUrl);
     if (choice == null || !mounted) return;
     setState(() => _joining = true);
-    final alias = choice == JoinIdentity.anonymous ? IdUtils.anonymousAlias() : null;
+    final alias = choice.alias;
     final r = await sl<GroupMembership>().joinWithLink(widget.chatId, widget.code, me.id, me.name, alias: alias);
     if (!mounted) return;
     setState(() => _joining = false);

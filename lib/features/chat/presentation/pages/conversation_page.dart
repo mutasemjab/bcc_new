@@ -1,9 +1,13 @@
 import 'dart:async';
 
+import 'dart:io';
+
+import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/di.dart';
 import '../../../../app/routes.dart';
@@ -24,7 +28,13 @@ import '../../../users/presentation/block_list.dart';
 import '../chat_actions.dart';
 import '../bloc/conversation/conversation_bloc.dart';
 import '../bloc/voice_recorder/voice_recorder_cubit.dart';
+import '../../../../core/utils/id_utils.dart';
+import '../../../appointments/appointments.dart';
+import '../chat_export.dart';
+import '../conversation_args.dart';
+import '../starred.dart';
 import '../widgets/composer.dart';
+import '../widgets/join_identity_sheet.dart';
 import '../widgets/conversation_banners.dart';
 import '../widgets/create_poll_sheet.dart';
 import '../widgets/forward_sheet.dart';
@@ -35,8 +45,9 @@ import '../widgets/upload_bubble.dart';
 import '../widgets/view_once_viewer.dart';
 
 class ConversationPage extends StatelessWidget {
-  const ConversationPage({super.key, required this.chatId});
+  const ConversationPage({super.key, required this.chatId, this.args});
   final String chatId;
+  final ConversationArgs? args;
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +58,15 @@ class ConversationPage extends StatelessWidget {
         BlocProvider(create: (_) => sl<ConversationBloc>()..add(ConversationStarted(chatId: chatId, me: session.user))),
         BlocProvider(create: (_) => VoiceRecorderCubit()),
       ],
-      child: _ConversationView(chatId: chatId),
+      child: _ConversationView(chatId: chatId, args: args),
     );
   }
 }
 
 class _ConversationView extends StatefulWidget {
-  const _ConversationView({required this.chatId});
+  const _ConversationView({required this.chatId, this.args});
   final String chatId;
+  final ConversationArgs? args;
   @override
   State<_ConversationView> createState() => _ConversationViewState();
 }
@@ -69,6 +81,20 @@ class _ConversationViewState extends State<_ConversationView> {
     // No notifications for the chat on screen; clear the ones already shown.
     ChatNotifications.openChatId = widget.chatId;
     ChatNotifications.clearChat(widget.chatId);
+    // Opened from "Starred messages" → jump to it; from "Reply privately" →
+    // start a reply quoting the group message.
+    final args = widget.args;
+    if (args != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await _bloc.stream
+            .firstWhere((s) => s.status == ConversationStatus.ready)
+            .timeout(const Duration(seconds: 10), onTimeout: () => _bloc.state);
+        if (!mounted) return;
+        if (args.replyTo != null) _bloc.add(ReplyTargetChanged(args.replyTo));
+        if (args.jumpToMessageId != null) await _jumpTo(args.jumpToMessageId!);
+      });
+    }
     _scroll.addListener(() {
       final show = _scroll.offset > 400;
       if (show != _showScrollDown) setState(() => _showScrollDown = show);
@@ -202,9 +228,63 @@ class _ConversationViewState extends State<_ConversationView> {
     }
   }
 
+  /// Camera button: take a photo, scan a document (→ PDF), or pick from gallery.
   Future<void> _onCamera() async {
-    final f = await sl<MediaPickerService>().pickImage(camera: true);
-    if (f != null) _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder:
+          (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_rounded, color: AppColors.primary),
+                  title: const Text('Take photo'),
+                  onTap: () => Navigator.pop(ctx, 'photo'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.document_scanner_rounded, color: AppColors.primary),
+                  title: const Text('Scan document'),
+                  subtitle: const Text('Sent as a PDF'),
+                  onTap: () => Navigator.pop(ctx, 'scan'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                  title: const Text('Choose from gallery'),
+                  onTap: () => Navigator.pop(ctx, 'gallery'),
+                ),
+              ],
+            ),
+          ),
+    );
+    if (choice == null || !mounted) return;
+    final picker = sl<MediaPickerService>();
+    try {
+      switch (choice) {
+        case 'photo':
+          final f = await picker.pickImage(camera: true);
+          if (f != null) _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
+        case 'gallery':
+          for (final f in await picker.pickMultiImages()) {
+            _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
+          }
+        case 'scan':
+          final result = await CunningDocumentScanner.scanDocuments(
+            noOfPages: 30,
+            scannerSource: ScannerSource.cameraAndGallery,
+            output: ScanOutput.pdf,
+          );
+          final pdf = result?.pdf;
+          if (pdf == null) return;
+          final file = File(pdf);
+          final name = 'Scan ${DateFormat('yyyy-MM-dd HH.mm').format(DateTime.now())}.pdf';
+          _bloc.add(
+            MediaMessageSent(type: MessageType.file, file: file, fileName: name, fileSize: await file.length()),
+          );
+      }
+    } catch (e) {
+      if (mounted) AppFeedback.error(context, 'Could not open the camera or scanner.');
+    }
   }
 
   Future<void> _onLongPress(MessageEntity m, ConversationState state) async {
@@ -216,6 +296,14 @@ class _ConversationViewState extends State<_ConversationView> {
       myReaction: m.reactions[myId],
       isPinned: state.chat?.pinnedMessages.any((p) => p.messageId == m.id) ?? false,
       canPin: state.isMember && state.chat != null,
+      isStarred: sl<StarredStore>().isStarred(m.chatId, m.id),
+      // Member → member in a group, only when both are public (not anonymous).
+      canReplyPrivately:
+          state.isGroup &&
+          !m.isMine(myId) &&
+          m.type != MessageType.system &&
+          !(state.chat?.isAnonymous(m.senderId) ?? true) &&
+          !state.amAnonymous,
     );
     if (result == null || !mounted) return;
     if (result.emoji != null) {
@@ -227,6 +315,16 @@ class _ConversationViewState extends State<_ConversationView> {
         _bloc.add(ReplyTargetChanged(m));
       case MessageAction.forward:
         await showForwardSheet(context, m);
+      case MessageAction.replyPrivately:
+        context.push(
+          AppRoutes.conversation(IdUtils.directChatId(myId, m.senderId)),
+          extra: ConversationArgs(replyTo: m),
+        );
+      case MessageAction.star:
+      case MessageAction.unstar:
+        await sl<StarredStore>().toggle(m, chatTitle: state.title, senderName: state.nameOf(m.senderId));
+      case MessageAction.addAppointment:
+        await showAppointmentEditor(context, initialTitle: m.text, chatId: state.chatId);
       case MessageAction.copy:
         await Clipboard.setData(ClipboardData(text: m.text));
         if (mounted) AppFeedback.info(context, 'Copied to clipboard');
@@ -298,7 +396,7 @@ class _ConversationViewState extends State<_ConversationView> {
   Widget build(BuildContext context) {
     // Rebuild when the block list changes (block / unblock from the menu).
     return ListenableBuilder(
-      listenable: sl<BlockList>(),
+      listenable: Listenable.merge([sl<BlockList>(), sl<StarredStore>()]),
       builder:
           (context, _) => BlocConsumer<ConversationBloc, ConversationState>(
             listenWhen: (p, c) => c.error != null && p.error != c.error,
@@ -365,7 +463,7 @@ class _ConversationViewState extends State<_ConversationView> {
                           name: state.peer!.name,
                           onUnblock: () => ChatActions.toggleBlock(context, state.peer!.id, state.peer!.name),
                         )
-                      else if (state.isMember)
+                      else if (state.isMember && !(state.chat?.closed ?? false))
                         Composer(
                           replyingTo: state.replyingTo,
                           replyingToName: state.replyingTo == null ? null : state.nameOf(state.replyingTo!.senderId),
@@ -399,16 +497,7 @@ class _ConversationViewState extends State<_ConversationView> {
                               ),
                         )
                       else
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + MediaQuery.paddingOf(context).bottom),
-                          color: context.theme.scaffoldBackgroundColor,
-                          child: Text(
-                            "You can't send messages to this group because you're no longer a member.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: context.palette.textSecondary),
-                          ),
-                        ),
+                        _NotMemberBar(state: state),
                     ],
                   ),
                 ),
@@ -538,6 +627,14 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
                 if (state.chat != null) ChatActions.toggleMute(context, state.chat!, state.me!.id);
               case 'clear':
                 ChatActions.clearChat(context, state.chatId, state.me!.id);
+              case 'autoclear':
+                if (state.chat != null) ChatActions.toggleAutoClear(context, state.chat!, state.me!.id);
+              case 'starred':
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => StarredMessagesPage(chatId: state.chatId)));
+              case 'export':
+                exportChat(context, state);
               case 'delete':
                 ChatActions.deleteChat(context, state.chatId, state.me!.id);
               case 'block':
@@ -554,7 +651,14 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
               if (state.chat != null)
                 PopupMenuItem(value: 'mute', child: Text(muted ? 'Unmute notifications' : 'Mute notifications')),
               const PopupMenuItem(value: 'wallpaper', child: Text('Wallpaper')),
+              const PopupMenuItem(value: 'starred', child: Text('Starred messages')),
               const PopupMenuItem(value: 'clear', child: Text('Clear chat')),
+              if (state.chat != null)
+                PopupMenuItem(
+                  value: 'autoclear',
+                  child: Text((state.chat!.autoClearsFor(state.me!.id)) ? 'Daily auto-clear: on' : 'Clear chat daily'),
+                ),
+              const PopupMenuItem(value: 'export', child: Text('Export chat')),
               if (!state.isGroup) const PopupMenuItem(value: 'delete', child: Text('Delete chat')),
               if (!state.isGroup && state.peer != null)
                 PopupMenuItem(value: 'block', child: Text(blocked ? 'Unblock' : 'Block')),
@@ -668,6 +772,11 @@ class _MessageList extends StatelessWidget {
           onReplyTap: m.replyTo == null ? null : () => onJump(m.replyTo!.messageId),
           onOpenViewOnce:
               () => openViewOnce(context, m, onOpened: () => sl<ChatTools>().markOpened(state.chatId, m.id, me)),
+          isStarred: sl<StarredStore>().isStarred(m.chatId, m.id),
+          onReview:
+              (state.chat?.isAdmin(me) ?? false) && m.pendingApproval && !m.isMine(me)
+                  ? (approve) => sl<GroupMembership>().reviewMedia(state.chatId, m.id, me, approve: approve)
+                  : null,
         );
 
         // Keyed so "jump to message" can find it; flashes when highlighted.
@@ -743,4 +852,62 @@ class _BlockedBar extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Instead of the composer: the group ended, or I left (with "Rejoin" when
+/// the group isn't secret), or I was removed.
+class _NotMemberBar extends StatelessWidget {
+  const _NotMemberBar({required this.state});
+  final ConversationState state;
+
+  Future<void> _rejoin(BuildContext context) async {
+    final me = state.me!;
+    final chat = state.chat!;
+    final choice = await chooseJoinIdentity(
+      context,
+      groupName: chat.name ?? 'Group',
+      myName: me.name,
+      myPhotoUrl: me.photoUrl,
+    );
+    if (choice == null || !context.mounted) return;
+    final r = await sl<GroupMembership>().rejoin(chat.id, me.id, me.name, alias: choice.alias);
+    if (context.mounted)
+      r.match((f) => AppFeedback.error(context, f.message), (_) => AppFeedback.info(context, 'Welcome back'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = state.chat;
+    final me = state.me?.id ?? '';
+    final String text;
+    if (chat?.closed ?? false) {
+      text = 'This group has ended. No one can send messages anymore.';
+    } else if (chat?.isFormerMember(me) ?? false) {
+      text =
+          chat!.secret
+              ? 'You left this secret group. An admin has to invite you to come back.'
+              : 'You left this group.';
+    } else {
+      text = "You can't send messages to this group because you're no longer a member.";
+    }
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + MediaQuery.paddingOf(context).bottom),
+      color: context.theme.scaffoldBackgroundColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(text, textAlign: TextAlign.center, style: TextStyle(color: context.palette.textSecondary)),
+          if (chat != null && chat.canRejoin(me)) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: () => _rejoin(context),
+              icon: const Icon(Icons.group_add_rounded),
+              label: const Text('Rejoin group'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// WhatsApp-style notifications: one notification per chat that collects its
@@ -203,6 +206,53 @@ abstract final class ChatNotifications {
           category: isCall ? AndroidNotificationCategory.call : AndroidNotificationCategory.social,
           fullScreenIntent: isCall,
           timeoutAfter: isCall ? 45000 : null,
+          icon: 'ic_notification',
+          color: _brand,
+        ),
+        iOS: const DarwinNotificationDetails(presentAlert: true, presentBanner: true, presentSound: true),
+      ),
+    );
+  }
+
+  static bool _tzReady = false;
+
+  static Future<void> _initTimeZone() async {
+    if (_tzReady) return;
+    tzdata.initializeTimeZones();
+    try {
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('Asia/Dubai'));
+    }
+    _tzReady = true;
+  }
+
+  /// Reminder notification at [at] (e.g. for an appointment). Inexact by a
+  /// few minutes on Android to save battery — no special alarm permission.
+  static Future<void> scheduleReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+  }) async {
+    if (!at.isAfter(DateTime.now())) return;
+    await init();
+    await _initTimeZone();
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(at, tz.local),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: 'appointments',
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _messagesChannel.id,
+          _messagesChannel.name,
+          importance: Importance.high,
+          priority: Priority.high,
+          category: AndroidNotificationCategory.reminder,
           icon: 'ic_notification',
           color: _brand,
         ),

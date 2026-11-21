@@ -37,6 +37,14 @@ service cloud.firestore {
       match /blocked/{blockedId} {
         allow read, write: if signedIn() && uid() == userId;
       }
+
+      // Starred messages and appointments — private to me.
+      match /starred/{starId} {
+        allow read, write: if signedIn() && uid() == userId;
+      }
+      match /appointments/{appointmentId} {
+        allow read, write: if signedIn() && uid() == userId;
+      }
     }
 
     // ── Presence (online / last seen) ─────────────────────────────────
@@ -74,15 +82,43 @@ service cloud.firestore {
       function memberActivity() {
         return request.resource.data.participants == resource.data.participants
           && onlyChanges(['lastMessage', 'updatedAt', 'unread', 'typing', 'pinnedBy', 'mutedBy', 'pinnedMessages',
-                          'clearedAt', 'deletedAt'])
-          // "Clear chat" / "Delete chat" only ever touch my own entry.
-          && ownKeyOnly('clearedAt') && ownKeyOnly('deletedAt');
+                          'clearedAt', 'deletedAt', 'autoClear'])
+          // "Clear chat" / "Delete chat" / auto-clear only ever touch my own entry.
+          && ownKeyOnly('clearedAt') && ownKeyOnly('deletedAt') && ownKeyOnly('autoClear');
       }
 
       function adminEdit() {
-        return isGroup() && isAdmin()
+        return isGroup() && isAdmin() && !resource.data.get('closed', false)
           && onlyChanges(['name', 'description', 'photoUrl', 'participants', 'admins', 'unread', 'lastMessage', 'updatedAt',
-                         'invited', 'invitedBy', 'inviteCode']);
+                         'invited', 'invitedBy', 'inviteCode', 'secret'])
+          // Admins are always public: an anonymous member can't be made admin.
+          && !request.resource.data.get('admins', []).hasAny(request.resource.data.get('anonymous', {}).keys());
+      }
+
+      // The owner leaving ends the group for everyone.
+      function endingGroup() {
+        return isGroup() && resource.data.get('createdBy', '') == uid()
+          && request.resource.data.closed == true
+          && onlyChanges(['closed', 'closedAt', 'inviteCode', 'lastMessage', 'updatedAt']);
+      }
+
+      // Members may share the join link of a non-secret group.
+      function memberSharesLink() {
+        return isGroup() && !resource.data.get('secret', false) && !resource.data.get('closed', false)
+          && onlyChanges(['inviteCode']);
+      }
+
+      // A member who left on their own comes back (non-secret, not ended).
+      function rejoining() {
+        let before = resource.data;
+        let after = request.resource.data;
+        return isGroup() && !before.get('secret', false) && !before.get('closed', false)
+          && uid() in before.get('formerMembers', [])
+          && after.participants.toSet() == before.participants.toSet().union([uid()].toSet())
+          && after.get('admins', []) == before.get('admins', [])
+          && after.get('formerMembers', []).toSet() == before.get('formerMembers', []).toSet().difference([uid()].toSet())
+          && ownKeyOnly('anonymous') && ownKeyOnly('unread')
+          && onlyChanges(['participants', 'formerMembers', 'unread', 'anonymous', 'lastMessage', 'updatedAt']);
       }
 
       // A member removing only themself; admin rights pass on if needed.
@@ -91,11 +127,14 @@ service cloud.firestore {
         let after = request.resource.data;
         let remainingAdmins = before.get('admins', []).toSet().difference([uid()].toSet());
         return isGroup()
+          // The owner doesn't "leave" — leaving ends the group (endingGroup).
+          && before.get('createdBy', '') != uid()
           && after.participants.toSet() == before.participants.toSet().difference([uid()].toSet())
           && (remainingAdmins.size() > 0
                 ? after.admins.toSet() == remainingAdmins
                 : after.admins.size() <= 1 && after.participants.toSet().hasAll(after.admins.toSet()))
-          && onlyChanges(['participants', 'admins', 'lastMessage', 'updatedAt']);
+          && after.get('formerMembers', []).toSet().difference(before.get('formerMembers', []).toSet()).hasOnly([uid()])
+          && onlyChanges(['participants', 'admins', 'lastMessage', 'updatedAt', 'formerMembers']);
       }
 
       // A map field where only the caller's own key may change.
@@ -121,7 +160,7 @@ service cloud.firestore {
 
       // Anyone holding the current join-link code may join.
       function joiningWithLink() {
-        return isGroup() && resource.data.get('inviteCode', '') != ''
+        return isGroup() && resource.data.get('inviteCode', '') != '' && !resource.data.get('closed', false)
           && request.resource.data.get('joinCode', '') == resource.data.inviteCode
           && !(uid() in resource.data.participants) && addsOnlySelf()
           && onlyChanges(['participants', 'invited', 'invitedBy', 'unread', 'anonymous', 'lastMessage', 'updatedAt', 'joinCode']);
@@ -145,19 +184,22 @@ service cloud.firestore {
           && (
             (wasAnon && !nowAnon && request.resource.data.revealedAt[uid()] == request.time)
             || (!wasAnon && nowAnon
+                && !isAdmin() // admins must stay public
                 && !changedKeys().hasAny(['revealedAt'])
                 && (!(uid() in revealed) || request.time > revealed[uid()] + duration.value(24, 'h')))
           );
       }
 
       // Plain field access so the "my invitations" query (array-contains) is provable.
-      allow read: if signedIn() && (resource == null || isMember() || uid() in resource.data.invited);
+      allow read: if signedIn() && (resource == null || isMember() || uid() in resource.data.invited
+                                     || uid() in resource.data.formerMembers);
       allow create: if signedIn()
         && uid() in request.resource.data.participants
         && (validDirectCreate() || validGroupCreate());
       allow update: if signedIn() && (
-        (isMember() && (memberActivity() || adminEdit() || leaving() || changingIdentity()))
-        || acceptingInvite() || decliningInvite() || joiningWithLink()
+        (isMember() && (memberActivity() || adminEdit() || leaving() || changingIdentity()
+                        || endingGroup() || memberSharesLink()))
+        || acceptingInvite() || decliningInvite() || joiningWithLink() || rejoining()
       );
       allow delete: if false;
 
@@ -176,11 +218,22 @@ service cloud.firestore {
           return ids.size() == 2 && blockedBetween(ids[0], ids[1]);
         }
 
+        // Photos / videos / files from an anonymous member wait for an admin.
+        function anonymousMediaApproved() {
+          let chat = getAfter(chatPath()).data;
+          return !(uid() in chat.get('anonymous', {}))
+            || !(request.resource.data.type in ['image', 'video', 'file'])
+            || request.resource.data.get('pendingApproval', false) == true;
+        }
+
         allow create: if signedIn()
           && request.resource.data.senderId == uid()
           && (uid() in getAfter(chatPath()).data.participants || uid() in get(chatPath()).data.participants)
           && request.resource.data.get('text', '').size() <= 4096
-          && !directBlocked();
+          && !directBlocked()
+          // Ended group: read-only (only the "ended" notice itself).
+          && (request.resource.data.type == 'system' || !getAfter(chatPath()).data.get('closed', false))
+          && anonymousMediaApproved();
 
         // Delete for everyone: within 2 hours. Edit text: within 15 minutes.
         function senderChangeAllowed() {
@@ -203,6 +256,9 @@ service cloud.firestore {
           || (resource.data.type == 'poll'
               && onlyChanges(['pollVotes'])
               && request.resource.data.get('pollVotes', {}).diff(resource.data.get('pollVotes', {})).affectedKeys().hasOnly([uid()]))
+          // Admins: approve / reject an anonymous member's media.
+          || (uid() in get(chatPath()).data.get('admins', [])
+              && onlyChanges(['pendingApproval', 'approvedBy', 'rejected']))
           // Anyone in the chat: mark a view-once message as opened (only themself).
           || (resource.data.get('viewOnce', false) == true
               && onlyChanges(['openedBy'])
@@ -218,10 +274,15 @@ service cloud.firestore {
       function adminOf(cid) {
         return uid() in get(/databases/$(database)/documents/chats/$(cid)).data.get('admins', []);
       }
+      function mayShare(cid) {
+        let chat = get(/databases/$(database)/documents/chats/$(cid)).data;
+        return uid() in chat.get('admins', [])
+          || (uid() in chat.participants && !chat.get('secret', false) && !chat.get('closed', false));
+      }
       allow get: if signedIn();
       allow list: if false;
-      allow create: if signedIn() && adminOf(request.resource.data.chatId);
-      allow delete: if signedIn() && adminOf(resource.data.chatId);
+      allow create: if signedIn() && mayShare(request.resource.data.chatId);
+      allow delete: if signedIn() && mayShare(resource.data.chatId);
     }
 
     // ── Stories ────────────────────────────────────────────────────────

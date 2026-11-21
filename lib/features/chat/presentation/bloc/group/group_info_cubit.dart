@@ -156,14 +156,34 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
         _removeMember((chatId: chatId, uid: user.id, actorId: me.id, actorName: myDisplayName, memberName: user.name)),
   );
 
-  Future<void> toggleAdmin(UserEntity user) {
+  Future<void> toggleAdmin(UserEntity user) async {
     final makeAdmin = !(state.chat?.isAdmin(user.id) ?? false);
-    return _run(() => _setAdmin((chatId: chatId, uid: user.id, isAdmin: makeAdmin)));
+    // Admins are public: an anonymous member must reveal first.
+    if (makeAdmin && (state.chat?.isAnonymous(user.id) ?? false)) {
+      emit(state.copyWith(message: 'Anonymous members must reveal their identity before becoming admin.'));
+      return;
+    }
+    if (!makeAdmin && (state.chat?.isOwner(user.id) ?? false)) {
+      emit(state.copyWith(message: "The group owner can't be dismissed as admin."));
+      return;
+    }
+    await _run(() => _setAdmin((chatId: chatId, uid: user.id, isAdmin: makeAdmin)));
   }
+
+  Future<void> setSecret(bool secret) => _run(
+    () => _membership.setSecret(chatId, secret),
+    success: secret ? 'Group is now secret' : 'Group is no longer secret',
+  );
+
+  /// The owner of the group: leaving ends it for everyone.
+  bool get isOwner => state.chat?.isOwner(me.id) ?? false;
 
   Future<void> leave() async {
     emit(state.copyWith(busy: true));
-    final r = await _leaveGroup((chatId: chatId, uid: me.id, name: myDisplayName));
+    final r =
+        isOwner
+            ? await _membership.endGroup(chatId, me.id, myDisplayName)
+            : await _leaveGroup((chatId: chatId, uid: me.id, name: myDisplayName));
     r.match(
       (f) => emit(state.copyWith(busy: false, message: f.message)),
       (_) => emit(state.copyWith(busy: false, left: true)),
@@ -178,11 +198,11 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
     await _run(() => _membership.reveal(chat, me.id, me.name), success: 'Your identity is now visible');
   }
 
-  Future<void> hideIdentity() async {
+  Future<void> hideIdentity({String? alias}) async {
     final chat = state.chat;
     if (chat == null) return;
     await _run(
-      () => _membership.hide(chat, me.id, me.name, IdUtils.anonymousAlias()),
+      () => _membership.hide(chat, me.id, me.name, alias ?? IdUtils.anonymousAlias()),
       success: 'You are now anonymous in this group',
     );
   }

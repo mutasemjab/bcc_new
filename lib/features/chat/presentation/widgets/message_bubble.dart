@@ -59,7 +59,13 @@ class MessageBubble extends StatefulWidget {
     this.onPollVote,
     this.nameOf,
     this.onOpenViewOnce,
+    this.onReview,
+    this.isStarred = false,
   });
+
+  /// Set for group admins: approve (true) / reject (false) pending media.
+  final ValueChanged<bool>? onReview;
+  final bool isStarred;
 
   final MessageEntity message;
   final String myId;
@@ -206,7 +212,23 @@ class _MessageBubbleState extends State<MessageBubble> with SingleTickerProvider
                     ),
                     const SizedBox(width: 6),
                   ],
-                  ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: withReactions),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: Column(
+                      crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        withReactions,
+                        if (m.pendingApproval || m.rejected)
+                          _ModerationStrip(message: m, isMine: isMine, onReview: widget.onReview),
+                        if (widget.isStarred)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                            child: Icon(Icons.star_rounded, size: 14, color: context.palette.textSecondary),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -574,7 +596,7 @@ class _LinkifiedTextState extends State<_LinkifiedText> {
     final spans = <InlineSpan>[];
     var last = 0;
     for (final match in _url.allMatches(text)) {
-      if (match.start > last) spans.add(TextSpan(text: text.substring(last, match.start)));
+      if (match.start > last) spans.addAll(formattedSpans(text.substring(last, match.start)));
       final url = match.group(0)!;
       final recognizer = TapGestureRecognizer()..onTap = () => _open(url);
       _recognizers.add(recognizer);
@@ -587,9 +609,45 @@ class _LinkifiedTextState extends State<_LinkifiedText> {
       );
       last = match.end;
     }
-    if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+    if (last < text.length) spans.addAll(formattedSpans(text.substring(last)));
     return Text.rich(TextSpan(style: base, children: spans));
   }
+}
+
+/// WhatsApp-style formatting: *bold*, _italic_, ~strikethrough~, ```monospace```.
+final _formatRe = RegExp(r'```([\s\S]+?)```|\*([^*\n]+)\*|_([^_\n]+)_|~([^~\n]+)~');
+
+List<InlineSpan> formattedSpans(String text) {
+  final spans = <InlineSpan>[];
+  var last = 0;
+  for (final m in _formatRe.allMatches(text)) {
+    // Markers must not sit inside a word (e.g. snake_case_names stay as is).
+    final before = m.start == 0 ? ' ' : text[m.start - 1];
+    final after = m.end >= text.length ? ' ' : text[m.end];
+    if (RegExp(r'[A-Za-z0-9؀-ۿ]').hasMatch(before) || RegExp(r'[A-Za-z0-9؀-ۿ]').hasMatch(after)) {
+      continue;
+    }
+    if (m.start > last) spans.add(TextSpan(text: text.substring(last, m.start)));
+    final TextStyle style;
+    final String inner;
+    if (m.group(1) != null) {
+      inner = m.group(1)!;
+      style = const TextStyle(fontFamily: 'monospace', fontFamilyFallback: ['Courier', 'monospace']);
+    } else if (m.group(2) != null) {
+      inner = m.group(2)!;
+      style = const TextStyle(fontWeight: FontWeight.w800);
+    } else if (m.group(3) != null) {
+      inner = m.group(3)!;
+      style = const TextStyle(fontStyle: FontStyle.italic);
+    } else {
+      inner = m.group(4)!;
+      style = const TextStyle(decoration: TextDecoration.lineThrough);
+    }
+    spans.add(TextSpan(text: inner, style: style));
+    last = m.end;
+  }
+  if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+  return spans;
 }
 
 class _QuotedReply extends StatelessWidget {
@@ -835,6 +893,49 @@ class _ViewOnceContent extends StatelessWidget {
             meta,
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Under media from an anonymous member: status for the sender, decision
+/// buttons for admins.
+class _ModerationStrip extends StatelessWidget {
+  const _ModerationStrip({required this.message, required this.isMine, this.onReview});
+  final MessageEntity message;
+  final bool isMine;
+  final ValueChanged<bool>? onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondary = TextStyle(color: context.palette.textSecondary, fontSize: 12);
+    if (message.rejected) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text('🚫 Not approved by an admin — only you can see this', style: secondary),
+      );
+    }
+    if (isMine || onReview == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text('⏳ Waiting for an admin to approve', style: secondary),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+      decoration: BoxDecoration(color: context.palette.surfaceHigh, borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text('Anonymous member — share with the group?', style: secondary)),
+          TextButton(
+            onPressed: () => onReview!(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Reject'),
+          ),
+          FilledButton(onPressed: () => onReview!(true), child: const Text('Approve')),
+        ],
       ),
     );
   }

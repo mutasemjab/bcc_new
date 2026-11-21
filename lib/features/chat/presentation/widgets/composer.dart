@@ -194,6 +194,32 @@ class _ComposerState extends State<Composer> {
     if (await widget.onSchedule!(text) && mounted) _controller.clear();
   }
 
+  /// Select text → Bold / Italic / Strikethrough / Monospace. Wraps the
+  /// selection in markers that the message bubble renders.
+  Widget _formattingMenu(BuildContext context, EditableTextState editable) {
+    final sel = _controller.selection;
+    final items = [...editable.contextMenuButtonItems];
+    if (sel.isValid && !sel.isCollapsed) {
+      void wrap(String marker) {
+        final text = _controller.text;
+        final start = sel.start, end = sel.end;
+        _controller.value = TextEditingValue(
+          text: text.replaceRange(start, end, '$marker${text.substring(start, end)}$marker'),
+          selection: TextSelection(baseOffset: start + marker.length, extentOffset: end + marker.length),
+        );
+        ContextMenuController.removeAny();
+      }
+
+      items.addAll([
+        ContextMenuButtonItem(label: 'Bold', onPressed: () => wrap('*')),
+        ContextMenuButtonItem(label: 'Italic', onPressed: () => wrap('_')),
+        ContextMenuButtonItem(label: 'Strikethrough', onPressed: () => wrap('~')),
+        ContextMenuButtonItem(label: 'Monospace', onPressed: () => wrap('```')),
+      ]);
+    }
+    return AdaptiveTextSelectionToolbar.buttonItems(anchors: editable.contextMenuAnchors, buttonItems: items);
+  }
+
   void _toggleEmoji() {
     if (_showEmoji) {
       _focus.requestFocus();
@@ -406,6 +432,8 @@ class _ComposerState extends State<Composer> {
             child: TextField(
               controller: _controller,
               focusNode: _focus,
+              // WhatsApp-style formatting on selected text.
+              contextMenuBuilder: _formattingMenu,
               minLines: 1,
               maxLines: 6,
               textCapitalization: TextCapitalization.sentences,
@@ -434,6 +462,13 @@ class _ComposerState extends State<Composer> {
                     child: Icon(Icons.attach_file_rounded, color: palette.textSecondary),
                   ),
                 ),
+                // Send later (also: long-press the send button).
+                if (_hasText && widget.onSchedule != null && widget.editing == null)
+                  IconButton(
+                    tooltip: 'Send later',
+                    onPressed: _schedule,
+                    icon: Icon(Icons.schedule_send_rounded, color: palette.textSecondary),
+                  ),
                 if (!_hasText)
                   IconButton(
                     onPressed: widget.onCamera,

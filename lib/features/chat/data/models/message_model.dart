@@ -32,6 +32,8 @@ class MessageModel extends MessageEntity {
     super.forwardCount,
     super.viewOnce,
     super.openedBy,
+    super.pendingApproval,
+    super.rejected,
   });
 
   static MessageType typeFromString(String v) =>
@@ -79,6 +81,8 @@ class MessageModel extends MessageEntity {
       forwardCount: (d['forwardCount'] as num?)?.toInt() ?? 0,
       viewOnce: d.boolean('viewOnce'),
       openedBy: d.strList('openedBy'),
+      pendingApproval: d.boolean('pendingApproval'),
+      rejected: d.boolean('rejected'),
       pollVotes: {
         for (final e in ((d['pollVotes'] as Map<String, dynamic>?) ?? const {}).entries)
           e.key: (e.value as List<dynamic>).map((v) => v.toString()).toList(),

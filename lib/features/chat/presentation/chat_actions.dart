@@ -70,4 +70,24 @@ abstract final class ChatActions {
     final err = await list.block(otherId);
     if (context.mounted) AppFeedback.info(context, err ?? '$otherName blocked');
   }
+
+  static Future<void> toggleAutoClear(BuildContext context, ChatEntity chat, String me) async {
+    final on = !chat.autoClearsFor(me);
+    if (on) {
+      final ok = await AppFeedback.confirm(
+        context,
+        title: 'Clear this chat every day?',
+        message: 'Every day the chat will be cleared automatically — for you only. Others keep their messages.',
+        confirmLabel: 'Turn on',
+      );
+      if (!ok || !context.mounted) return;
+    }
+    final r = await sl<ChatTools>().setAutoClear(chat.id, me, on);
+    if (context.mounted) {
+      r.match(
+        (f) => AppFeedback.error(context, f.message),
+        (_) => AppFeedback.info(context, on ? 'Daily auto-clear is on' : 'Daily auto-clear is off'),
+      );
+    }
+  }
 }

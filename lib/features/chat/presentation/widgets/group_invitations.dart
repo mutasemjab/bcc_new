@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/di.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/id_utils.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_feedback.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
@@ -23,9 +22,9 @@ Future<bool> acceptGroupInvite(BuildContext context, {required String chatId, re
   final session = context.read<SessionBloc>().state;
   if (session is! SessionAuthenticated) return false;
   final me = session.user;
-  final choice = await showJoinIdentitySheet(context, groupName: groupName, myName: me.name, myPhotoUrl: me.photoUrl);
+  final choice = await chooseJoinIdentity(context, groupName: groupName, myName: me.name, myPhotoUrl: me.photoUrl);
   if (choice == null) return false;
-  final alias = choice == JoinIdentity.anonymous ? IdUtils.anonymousAlias() : null;
+  final alias = choice.alias;
   final r = await sl<GroupMembership>().accept(chatId, me.id, me.name, alias: alias);
   if (!context.mounted) return false;
   return r.fold(

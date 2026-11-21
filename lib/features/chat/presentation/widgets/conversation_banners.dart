@@ -223,8 +223,48 @@ Future<void> showScheduledMessagesSheet(BuildContext context, {required String u
 }
 
 /// Date + time pickers; returns a moment at least one minute in the future.
+/// "Send later": quick choices (in 1 / 3 / 8 hours, tomorrow morning) or a
+/// custom date and time.
 Future<DateTime?> pickScheduleTime(BuildContext context) async {
   final now = DateTime.now();
+  final tomorrow9 = DateTime(now.year, now.month, now.day + 1, 9);
+  final presets = <(String, DateTime)>[
+    ('In 1 hour', now.add(const Duration(hours: 1))),
+    ('In 3 hours', now.add(const Duration(hours: 3))),
+    ('In 8 hours', now.add(const Duration(hours: 8))),
+    ('Tomorrow at 9:00 AM', tomorrow9),
+  ];
+  final picked = await showModalBottomSheet<Object>(
+    context: context,
+    builder:
+        (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Text('Send later', style: ctx.text.titleLarge),
+              ),
+              for (final (label, at) in presets)
+                ListTile(
+                  leading: const Icon(Icons.schedule_send_rounded, color: AppColors.primary),
+                  title: Text(label),
+                  subtitle: Text(_when(at)),
+                  onTap: () => Navigator.pop(ctx, at),
+                ),
+              ListTile(
+                leading: const Icon(Icons.edit_calendar_rounded, color: AppColors.primary),
+                title: const Text('Pick date & time'),
+                onTap: () => Navigator.pop(ctx, 'custom'),
+              ),
+            ],
+          ),
+        ),
+  );
+  if (picked is DateTime) return picked;
+  if (picked != 'custom' || !context.mounted) return null;
+
   final date = await showDatePicker(
     context: context,
     initialDate: now,

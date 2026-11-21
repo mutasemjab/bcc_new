@@ -190,4 +190,26 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   ResultFuture<List<MessageEntity>> recentHistory(String chatId) => guard(() => _remote.recentHistory(chatId));
+
+  @override
+  ResultFuture<void> endGroup(String chatId, String uid, String name) =>
+      guard(() => _remote.endGroup(chatId, uid, name));
+
+  @override
+  ResultFuture<void> rejoinGroup(String chatId, String uid, String name, {String? alias}) =>
+      guard(() => _remote.rejoinGroup(chatId, uid, name, alias: alias));
+
+  @override
+  ResultFuture<void> setSecret(String chatId, bool secret) => guard(() => _remote.setSecret(chatId, secret));
+
+  @override
+  ResultFuture<void> setAutoClear(String chatId, String uid, bool on) =>
+      guard(() => _remote.setAutoClear(chatId, uid, on));
+
+  @override
+  ResultFuture<void> reviewMedia(String chatId, String messageId, String adminId, {required bool approve}) =>
+      guard(() => _remote.reviewMedia(chatId, messageId, adminId, approve: approve));
+
+  @override
+  ResultFuture<List<MessageEntity>> fullHistory(String chatId) => guard(() => _remote.fullHistory(chatId));
 }

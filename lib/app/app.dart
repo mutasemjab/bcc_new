@@ -9,6 +9,7 @@ import '../core/config/env.dart';
 import '../core/services/chat_notifications.dart';
 import '../core/services/push_service.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/appearance_settings.dart';
 import '../core/theme/theme_cubit.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
 import '../features/calls/domain/entities/call_entity.dart';
@@ -16,7 +17,10 @@ import '../features/calls/presentation/bloc/call_log/call_log_cubit.dart';
 import '../features/calls/presentation/bloc/incoming_call/incoming_call_cubit.dart';
 import '../features/chat/presentation/bloc/chat_list/chat_list_bloc.dart';
 import '../features/chat/presentation/foreground_notifier.dart';
+import '../features/appointments/appointments.dart';
 import '../features/chat/presentation/scheduled_dispatcher.dart';
+import '../features/chat/presentation/auto_clear.dart';
+import '../features/chat/presentation/starred.dart';
 import '../features/status/presentation/bloc/status_bloc.dart';
 import '../features/users/presentation/block_list.dart';
 import '../features/users/presentation/contact_sync.dart';
@@ -114,13 +118,25 @@ class _BccChatAppState extends State<BccChatApp> {
         router: _router,
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder:
-              (context, mode) => MaterialApp.router(
-                title: Env.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.light,
-                darkTheme: AppTheme.dark,
-                themeMode: mode,
-                routerConfig: _router,
+              (context, mode) => ListenableBuilder(
+                // Font family + text size chosen in Settings → Font.
+                listenable: sl<AppearanceSettings>(),
+                builder: (context, _) {
+                  final look = sl<AppearanceSettings>();
+                  return MaterialApp.router(
+                    title: Env.appName,
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.themed(Brightness.light, look.font),
+                    darkTheme: AppTheme.themed(Brightness.dark, look.font),
+                    themeMode: mode,
+                    routerConfig: _router,
+                    builder:
+                        (context, child) => MediaQuery(
+                          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(look.scale)),
+                          child: child!,
+                        ),
+                  );
+                },
               ),
         ),
       ),
@@ -148,6 +164,8 @@ class _SessionCoordinator extends StatelessWidget {
               context.read<IncomingCallCubit>().start(uid);
               sl<ScheduledDispatcher>().start(uid);
               sl<BlockList>().start(uid);
+              sl<StarredStore>().start(uid);
+              sl<AppointmentsStore>().start(uid);
               // Background contact discovery (cached on the device).
               sl<ContactSync>().start(uid, myPhone: state.user.phone);
               context.read<StatusBloc>().add(StatusFeedStarted(me: uid, contacts: const {}));
@@ -158,6 +176,8 @@ class _SessionCoordinator extends StatelessWidget {
               sl<ScheduledDispatcher>().stop();
               sl<ForegroundNotifier>().reset();
               sl<BlockList>().stop();
+              sl<StarredStore>().stop();
+              sl<AppointmentsStore>().stop();
               sl<ContactSync>().stop();
               context.read<StatusBloc>().add(const StatusFeedStopped());
             }
@@ -166,7 +186,10 @@ class _SessionCoordinator extends StatelessWidget {
         // In-app notifications for new messages in other chats.
         BlocListener<ChatListBloc, ChatListState>(
           listenWhen: (p, c) => !identical(p.chats, c.chats),
-          listener: (context, state) => sl<ForegroundNotifier>().onChats(state, blocked: sl<BlockList>().blocked),
+          listener: (context, state) {
+            sl<ForegroundNotifier>().onChats(state, blocked: sl<BlockList>().blocked);
+            sl<AutoClearService>().onChats(state);
+          },
         ),
         // Stories follow the people you talk to.
         BlocListener<ChatListBloc, ChatListState>(

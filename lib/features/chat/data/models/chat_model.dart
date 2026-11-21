@@ -28,6 +28,10 @@ class ChatModel extends ChatEntity {
     super.inviteCode,
     super.clearedAt,
     super.deletedAt,
+    super.secret,
+    super.closed,
+    super.formerMembers,
+    super.autoClear,
   });
 
   factory ChatModel.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -79,6 +83,10 @@ class ChatModel extends ChatEntity {
       inviteCode: d.strOrNull('inviteCode'),
       clearedAt: _times(d['clearedAt']),
       deletedAt: _times(d['deletedAt']),
+      secret: d.boolean('secret'),
+      closed: d.boolean('closed'),
+      formerMembers: d.strList('formerMembers'),
+      autoClear: d.mapOf<bool>('autoClear', (v) => v == true),
     );
   }
 

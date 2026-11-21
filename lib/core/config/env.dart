@@ -11,4 +11,10 @@ abstract final class Env {
   /// Where invited friends download the app. Replace with the Google Play /
   /// App Store link once the app is published.
   static const downloadUrl = 'https://play.google.com/store/apps/details?id=com.bccchat.ammar';
+
+  // ── Company & support (shown in Settings → Help & support) ──
+  static const companyName = 'BCC Club Chat';
+  static const supportPhone = '+13175096666';
+  static const supportEmail = 'zidan74@gmail.com';
+  static const companyAddress = 'UAE, Dubai';
 }

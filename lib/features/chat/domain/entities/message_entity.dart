@@ -53,6 +53,8 @@ class MessageEntity extends Equatable {
     this.forwardCount = 0,
     this.viewOnce = false,
     this.openedBy = const [],
+    this.pendingApproval = false,
+    this.rejected = false,
   });
 
   final String id;
@@ -98,6 +100,15 @@ class MessageEntity extends Equatable {
   final bool viewOnce;
   final List<String> openedBy;
   bool openedByUser(String uid) => openedBy.contains(uid);
+
+  /// Media from an anonymous group member, waiting for an admin to approve it.
+  final bool pendingApproval;
+
+  /// An admin rejected this media.
+  final bool rejected;
+
+  /// Media types an anonymous member needs approval for.
+  static const approvalTypes = {MessageType.image, MessageType.video, MessageType.file};
 
   /// Number of voters per option id.
   Map<String, int> get pollCounts {
@@ -170,6 +181,8 @@ class MessageEntity extends Equatable {
     forwardCount,
     viewOnce,
     openedBy,
+    pendingApproval,
+    rejected,
   ];
 }
 

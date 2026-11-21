@@ -12,6 +12,7 @@ import '../features/calls/domain/entities/call_entity.dart';
 import '../features/calls/presentation/call_launcher.dart';
 import '../features/calls/presentation/pages/call_page.dart';
 import '../features/calls/presentation/pages/incoming_call_page.dart';
+import '../features/chat/presentation/conversation_args.dart';
 import '../features/chat/presentation/pages/chat_media_page.dart';
 import '../features/chat/presentation/pages/conversation_page.dart';
 import '../features/chat/presentation/pages/create_group_page.dart';
@@ -65,7 +66,11 @@ GoRouter buildRouter(SessionBloc session) {
       GoRoute(path: AppRoutes.editProfile, builder: (_, __) => const ProfileSetupPage(isEditing: true)),
       GoRoute(
         path: '/chat/:chatId',
-        builder: (_, s) => ConversationPage(chatId: s.pathParameters['chatId']!),
+        builder:
+            (_, s) => ConversationPage(
+              chatId: s.pathParameters['chatId']!,
+              args: s.extra is ConversationArgs ? s.extra! as ConversationArgs : null,
+            ),
         routes: [
           GoRoute(path: 'group-info', builder: (_, s) => GroupInfoPage(chatId: s.pathParameters['chatId']!)),
           GoRoute(path: 'media', builder: (_, s) => ChatMediaPage(chatId: s.pathParameters['chatId']!)),

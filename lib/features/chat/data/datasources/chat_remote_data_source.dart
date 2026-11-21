@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 
 import '../../../../core/constants/firestore_paths.dart';
 import '../../../../core/data/storage_data_source.dart';
@@ -36,8 +37,16 @@ class ChatRemoteDataSource {
 
   // ── Chats ──────────────────────────────────────────────────────────────
 
-  Stream<List<ChatModel>> watchChats(String uid) =>
-      _chats.where('participants', arrayContains: uid).snapshots().map((s) => s.docs.map(ChatModel.fromDoc).toList());
+  Stream<List<ChatModel>> watchChats(String uid) => Rx.combineLatest2(
+    _chats.where('participants', arrayContains: uid).snapshots().map((s) => s.docs.map(ChatModel.fromDoc).toList()),
+    _chats
+        .where('formerMembers', arrayContains: uid)
+        .snapshots()
+        .map((s) => s.docs.map(ChatModel.fromDoc).toList())
+        .onErrorReturn(const <ChatModel>[]),
+    (List<ChatModel> mine, List<ChatModel> left) =>
+        {for (final c in left) c.id: c, for (final c in mine) c.id: c}.values.toList(),
+  );
 
   Stream<ChatModel?> watchChat(String chatId) =>
       _chats.doc(chatId).snapshots().map((d) => d.exists ? ChatModel.fromDoc(d) : null);
@@ -96,10 +105,11 @@ class ChatRemoteDataSource {
       );
     }
 
-    final batch =
-        _db.batch()
-          ..set(msgRef, _messageData(m, mediaUrl))
-          ..set(_chats.doc(m.chatId), _chatBump(m, msgRef.id, m.participants), SetOptions(merge: true));
+    final batch = _db.batch()..set(msgRef, _messageData(m, mediaUrl));
+    // Media waiting for admin approval doesn't show up in the chat list yet.
+    if (!m.pendingApproval) {
+      batch.set(_chats.doc(m.chatId), _chatBump(m, msgRef.id, m.participants), SetOptions(merge: true));
+    }
     await batch.commit();
   }
 
@@ -121,6 +131,7 @@ class ChatRemoteDataSource {
     if (m.forwardCount > 0) 'forwardCount': m.forwardCount,
     if (m.viewOnce) 'viewOnce': true,
     if (m.viewOnce) 'openedBy': <String>[],
+    if (m.pendingApproval) 'pendingApproval': true,
     'createdAt': FieldValue.serverTimestamp(),
     'clientCreatedAt': Timestamp.now(),
     'deliveredTo': <String>[],
@@ -367,12 +378,18 @@ class ChatRemoteDataSource {
       if (data == null) return;
       final participants = List<String>.from(data['participants'] as List<dynamic>)..remove(uid);
       final admins = List<String>.from((data['admins'] as List<dynamic>?) ?? const [])..remove(uid);
-      if (admins.isEmpty && participants.isNotEmpty) admins.add(participants.first);
+      final anonymous = Map<String, dynamic>.from((data['anonymous'] as Map?) ?? const {});
+      // Admins are always public: promote the first member who isn't anonymous.
+      if (admins.isEmpty) {
+        final next = participants.where((p) => !anonymous.containsKey(p)).firstOrNull;
+        if (next != null) admins.add(next);
+      }
       final msgRef = _messages(chatId).doc();
       final text = '$name left';
       tx.update(ref, {
         'participants': participants,
         'admins': admins,
+        'formerMembers': FieldValue.arrayUnion([uid]),
         'lastMessage': _lastMessage(msgRef.id, uid, MessageType.system, text),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -380,9 +397,83 @@ class ChatRemoteDataSource {
     });
   }
 
-  Future<void> setAdmin(String chatId, String uid, bool isAdmin) => _chats.doc(chatId).update({
-    'admins': isAdmin ? FieldValue.arrayUnion([uid]) : FieldValue.arrayRemove([uid]),
-  });
+  /// Admins are announced to every member with a system message.
+  Future<void> setAdmin(String chatId, String uid, bool isAdmin) async {
+    final user = await _db.collection(FirestorePaths.users).doc(uid).get();
+    final name = (user.data()?['name'] as String?) ?? 'A member';
+    final msgRef = _messages(chatId).doc();
+    final notice = isAdmin ? '$name is now an admin' : '$name is no longer an admin';
+    final batch =
+        _db.batch()
+          ..update(_chats.doc(chatId), {
+            'admins': isAdmin ? FieldValue.arrayUnion([uid]) : FieldValue.arrayRemove([uid]),
+            'lastMessage': _lastMessage(msgRef.id, uid, MessageType.system, notice),
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          ..set(msgRef, _systemData(uid, notice));
+    await batch.commit();
+  }
+
+  /// The owner leaving ends the group for everyone (read-only from then on).
+  Future<void> endGroup(String chatId, String uid, String name) async {
+    final chat = (await _chats.doc(chatId).get()).data() ?? const {};
+    final code = chat['inviteCode'] as String?;
+    final msgRef = _messages(chatId).doc();
+    final notice = '$name ended the group';
+    final batch =
+        _db.batch()
+          ..update(_chats.doc(chatId), {
+            'closed': true,
+            'closedAt': FieldValue.serverTimestamp(),
+            'inviteCode': FieldValue.delete(),
+            'lastMessage': _lastMessage(msgRef.id, uid, MessageType.system, notice),
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          ..set(msgRef, _systemData(uid, notice));
+    if (code != null) batch.delete(_invites.doc(code));
+    await batch.commit();
+  }
+
+  /// A former member comes back (non-secret, not ended groups only).
+  Future<void> rejoinGroup(String chatId, String uid, String name, {String? alias}) {
+    final msgRef = _messages(chatId).doc();
+    final notice = alias == null ? '$name rejoined' : '$alias joined anonymously';
+    final batch =
+        _db.batch()
+          ..update(_chats.doc(chatId), {
+            'participants': FieldValue.arrayUnion([uid]),
+            'formerMembers': FieldValue.arrayRemove([uid]),
+            'unread.$uid': 0,
+            if (alias != null) 'anonymous.$uid': alias,
+            if (alias == null) 'anonymous.$uid': FieldValue.delete(),
+            'lastMessage': _lastMessage(msgRef.id, uid, MessageType.system, notice),
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          ..set(msgRef, _systemData(uid, notice));
+    return batch.commit();
+  }
+
+  Future<void> setSecret(String chatId, bool secret) => _chats.doc(chatId).update({'secret': secret});
+
+  Future<void> setAutoClear(String chatId, String uid, bool on) =>
+      _chats.doc(chatId).update({'autoClear.$uid': on ? true : FieldValue.delete()});
+
+  /// Admin decision on an anonymous member's media.
+  Future<void> reviewMedia(String chatId, String messageId, String adminId, {required bool approve}) async {
+    final ref = _messages(chatId).doc(messageId);
+    await ref.update({'pendingApproval': false, 'approvedBy': adminId, if (!approve) 'rejected': true});
+    if (!approve) return;
+    // Now it counts as a normal message: preview + unread for everyone.
+    final msg = MessageModel.fromDoc(chatId, await ref.get());
+    final chat = (await _chats.doc(chatId).get()).data() ?? const {};
+    final participants = List<String>.from(chat['participants'] as List<dynamic>? ?? const []);
+    await _chats.doc(chatId).update({
+      'lastMessage': _lastMessage(messageId, msg.senderId, msg.type, msg.preview),
+      'updatedAt': FieldValue.serverTimestamp(),
+      for (final p in participants)
+        if (p != msg.senderId) 'unread.$p': FieldValue.increment(1),
+    });
+  }
 
   // ── Group invitations & anonymity ──────────────────────────────────────
 
@@ -607,6 +698,21 @@ class ChatRemoteDataSource {
   Future<List<MessageModel>> recentHistory(String chatId, {int limit = 1000}) async {
     final snap = await _messages(chatId).orderBy('createdAt', descending: true).limit(limit).get();
     return snap.docs.map((d) => MessageModel.fromDoc(chatId, d)).toList();
+  }
+
+  /// Whole history, oldest first, in pages of 500 (for "Export chat").
+  Future<List<MessageModel>> fullHistory(String chatId) async {
+    final out = <MessageModel>[];
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      var q = _messages(chatId).orderBy('createdAt').limit(500);
+      if (last != null) q = q.startAfterDocument(last);
+      final snap = await q.get();
+      out.addAll(snap.docs.map((d) => MessageModel.fromDoc(chatId, d)));
+      if (snap.docs.length < 500) break;
+      last = snap.docs.last;
+    }
+    return out;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────

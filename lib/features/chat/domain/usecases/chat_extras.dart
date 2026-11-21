@@ -38,6 +38,13 @@ class GroupMembership {
     return _repo.hideIdentity(chat.id, uid, name, alias);
   }
 
+  ResultFuture<void> endGroup(String chatId, String uid, String name) => _repo.endGroup(chatId, uid, name);
+  ResultFuture<void> rejoin(String chatId, String uid, String name, {String? alias}) =>
+      _repo.rejoinGroup(chatId, uid, name, alias: alias);
+  ResultFuture<void> setSecret(String chatId, bool secret) => _repo.setSecret(chatId, secret);
+  ResultFuture<void> reviewMedia(String chatId, String messageId, String adminId, {required bool approve}) =>
+      _repo.reviewMedia(chatId, messageId, adminId, approve: approve);
+
   ResultFuture<String> createLink(String chatId) => _repo.createInviteLink(chatId);
   ResultFuture<void> revokeLink(String chatId, String code) => _repo.revokeInviteLink(chatId, code);
   ResultFuture<GroupInvitePreview?> preview(String code) => _repo.getInvite(code);
@@ -74,8 +81,10 @@ class ChatTools {
   ResultFuture<void> deleteScheduled(String uid, String id) => _repo.deleteScheduled(uid, id);
   ResultFuture<void> sendScheduledNow(ScheduledMessage m) => _repo.dispatchScheduled(m);
   ResultFuture<List<MessageEntity>> history(String chatId) => _repo.recentHistory(chatId);
+  ResultFuture<List<MessageEntity>> fullHistory(String chatId) => _repo.fullHistory(chatId);
 
   ResultFuture<void> clearChat(String chatId, String uid) => _repo.clearChat(chatId, uid);
+  ResultFuture<void> setAutoClear(String chatId, String uid, bool on) => _repo.setAutoClear(chatId, uid, on);
   ResultFuture<void> deleteChat(String chatId, String uid) => _repo.deleteChat(chatId, uid);
   ResultFuture<void> markOpened(String chatId, String messageId, String uid) =>
       _repo.markOpened(chatId, messageId, uid);

@@ -12,6 +12,7 @@ import '../core/services/media_picker_service.dart';
 import '../core/services/phone_linker.dart';
 import '../core/services/wallpaper_store.dart';
 import '../core/services/push_service.dart';
+import '../core/theme/appearance_settings.dart';
 import '../core/theme/theme_cubit.dart';
 import '../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
@@ -39,7 +40,10 @@ import '../features/chat/domain/usecases/message_usecases.dart';
 import '../features/chat/presentation/bloc/chat_list/chat_list_bloc.dart';
 import '../features/chat/presentation/bloc/conversation/conversation_bloc.dart';
 import '../features/chat/presentation/foreground_notifier.dart';
+import '../features/appointments/appointments.dart';
 import '../features/chat/presentation/scheduled_dispatcher.dart';
+import '../features/chat/presentation/auto_clear.dart';
+import '../features/chat/presentation/starred.dart';
 import '../features/chat/presentation/widgets/stickers/my_stickers_store.dart';
 import '../features/status/data/datasources/status_remote_data_source.dart';
 import '../features/status/data/repositories/status_repository_impl.dart';
@@ -77,7 +81,11 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => MyStickersStore(sl()))
     ..registerLazySingleton(() => ContactsService())
     ..registerLazySingleton(() => WallpaperStore(sl()))
+    ..registerLazySingleton(() => AppearanceSettings(sl()))
     ..registerLazySingleton(() => PhoneLinker(sl(), sl()))
+    ..registerLazySingleton(() => StarredStore(sl()))
+    ..registerLazySingleton(() => AutoClearService(sl()))
+    ..registerLazySingleton(() => AppointmentsStore(sl()))
     ..registerLazySingleton(() => PushService(sl()))
     ..registerLazySingleton(() => ThemeCubit(sl()));
 

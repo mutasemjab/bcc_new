@@ -112,7 +112,11 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   void _subscribeMessages() {
     _subscribed = true;
     _messagesSub?.cancel();
-    _messagesSub = _watchMessages((state.chatId, state.limit, null)).listen((m) => add(_MessagesChanged(m)));
+    _messagesSub = _watchMessages((state.chatId, state.limit, null)).listen(
+      (m) => add(_MessagesChanged(m)),
+      // e.g. I left the group: history is no longer readable → show it empty.
+      onError: (Object _) => add(const _MessagesChanged([])),
+    );
   }
 
   void _watchUserIds(Set<String> ids) {
@@ -144,7 +148,16 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // sending) shows normally.
     final cleared = _clearedAt;
     bool afterClear(MessageEntity m) => cleared == null || m.isPending || (m.createdAt?.isAfter(cleared) ?? true);
-    final visible = e.messages.where((m) => !m.isHiddenFor(_me) && afterClear(m)).toList();
+    final isAdmin = state.chat?.isAdmin(_me) ?? false;
+    // Media waiting for approval: only its sender and the admins see it.
+    // Rejected media: hidden from everyone but the sender.
+    bool moderated(MessageEntity m) {
+      if (m.rejected) return m.isMine(_me);
+      if (m.pendingApproval) return m.isMine(_me) || isAdmin;
+      return true;
+    }
+
+    final visible = e.messages.where((m) => !m.isHiddenFor(_me) && afterClear(m) && moderated(m)).toList();
     final oldest = e.messages.isEmpty ? null : e.messages.last;
     emit(
       state.copyWith(
@@ -240,6 +253,8 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       duration: e.duration,
       waveform: e.waveform,
       viewOnce: e.viewOnce,
+      // Anonymous group members need an admin to approve photos, videos and files.
+      pendingApproval: (state.chat?.isAnonymous(_me) ?? false) && MessageEntity.approvalTypes.contains(e.type),
     );
     // Not awaited inside the handler so the user can keep chatting while uploading.
     unawaited(

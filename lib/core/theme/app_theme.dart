@@ -10,7 +10,10 @@ abstract final class AppTheme {
   static ThemeData get light => _build(Brightness.light);
   static ThemeData get dark => _build(Brightness.dark);
 
-  static ThemeData _build(Brightness brightness) {
+  /// Theme with the user's chosen font (Google Fonts family name).
+  static ThemeData themed(Brightness brightness, String fontFamily) => _build(brightness, fontFamily: fontFamily);
+
+  static ThemeData _build(Brightness brightness, {String fontFamily = 'Plus Jakarta Sans'}) {
     final isDark = brightness == Brightness.dark;
     final background = isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final surface = isDark ? AppColors.darkSurface : AppColors.lightSurface;
@@ -41,7 +44,7 @@ abstract final class AppTheme {
 
     // Latin glyphs from Plus Jakarta Sans, Arabic glyphs from IBM Plex Sans Arabic.
     final arabicFallback = GoogleFonts.ibmPlexSansArabic().fontFamily;
-    final base = GoogleFonts.plusJakartaSansTextTheme(ThemeData(brightness: brightness).textTheme).apply(
+    final base = GoogleFonts.getTextTheme(fontFamily, ThemeData(brightness: brightness).textTheme).apply(
       bodyColor: textPrimary,
       displayColor: textPrimary,
       fontFamilyFallback: [if (arabicFallback != null) arabicFallback],

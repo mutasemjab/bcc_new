@@ -20,6 +20,7 @@ import '../../domain/usecases/chat_extras.dart';
 import '../../domain/usecases/chat_usecases.dart';
 import '../../domain/usecases/group_usecases.dart';
 import '../bloc/group/group_info_cubit.dart';
+import '../../../../core/utils/id_utils.dart';
 import '../chat_actions.dart';
 import '../widgets/group_identity_widgets.dart';
 import 'create_group_page.dart';
@@ -124,20 +125,34 @@ class _GroupInfoView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Anonymous members can't be contacted outside the group.
-                if (!chat.isAnonymous(user.id))
+                // Only admins can open a member's profile (number / email).
+                if (cubit.isAdmin && !chat.isAnonymous(user.id))
+                  ListTile(
+                    leading: const Icon(Icons.person_rounded),
+                    title: Text('View ${user.name.split(' ').first}'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.push(AppRoutes.userProfile(user.id));
+                    },
+                  ),
+                // Direct message: only between two public (non-anonymous) people.
+                if (!chat.isAnonymous(user.id) && !chat.isAnonymous(cubit.me.id))
                   ListTile(
                     leading: const Icon(Icons.chat_bubble_outline_rounded),
                     title: Text('Message ${user.name.split(' ').first}'),
                     onTap: () {
                       Navigator.pop(ctx);
-                      context.push(AppRoutes.userProfile(user.id));
+                      context.push(AppRoutes.conversation(IdUtils.directChatId(cubit.me.id, user.id)));
                     },
                   ),
                 if (cubit.isAdmin) ...[
                   ListTile(
                     leading: Icon(isAdmin ? Icons.remove_moderator_rounded : Icons.add_moderator_rounded),
                     title: Text(isAdmin ? 'Dismiss as admin' : 'Make group admin'),
+                    subtitle:
+                        !isAdmin && chat.isAnonymous(user.id)
+                            ? const Text('Must reveal their identity first — admins are public')
+                            : null,
                     onTap: () {
                       Navigator.pop(ctx);
                       cubit.toggleAdmin(user);
@@ -331,7 +346,21 @@ class _GroupInfoView extends StatelessWidget {
                   ),
                 ),
               if (amIMember) SliverToBoxAdapter(child: GroupIdentityCard(cubit: cubit, chat: chat)),
-              if (cubit.isAdmin)
+              if (cubit.isAdmin && !chat.closed)
+                SliverToBoxAdapter(
+                  child: _Card(
+                    child: SwitchListTile(
+                      secondary: const Icon(Icons.lock_rounded, color: AppColors.primary),
+                      title: const Text('Secret group'),
+                      subtitle: const Text(
+                        "Members can't share the invite link, and members who leave can't rejoin on their own.",
+                      ),
+                      value: chat.secret,
+                      onChanged: cubit.setSecret,
+                    ),
+                  ),
+                ),
+              if (chat.canShareLink(cubit.me.id))
                 SliverToBoxAdapter(
                   child: _Card(
                     child: ListTile(
@@ -390,7 +419,13 @@ class _GroupInfoView extends StatelessWidget {
                         UserTile(
                           user: m,
                           subtitle:
-                              m.id == cubit.me.id ? (chat.isAnonymous(m.id) ? 'You • anonymous' : 'You') : m.about,
+                              m.id == cubit.me.id
+                                  ? (chat.isAnonymous(m.id) ? 'You • anonymous' : 'You')
+                                  : chat.isAnonymous(m.id)
+                                  ? 'Anonymous member'
+                                  : cubit.isAdmin
+                                  ? [m.phone, m.email].whereType<String>().join(' • ')
+                                  : '',
                           onTap: m.id == cubit.me.id ? null : () => _memberOptions(context, cubit, m),
                           trailing:
                               chat.isAdmin(m.id)
@@ -420,16 +455,24 @@ class _GroupInfoView extends StatelessWidget {
                   child: _Card(
                     child: ListTile(
                       leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
-                      title: const Text(
-                        'Exit group',
-                        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+                      title: Text(
+                        cubit.isOwner ? 'Exit and end group' : 'Exit group',
+                        style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
                       ),
+                      subtitle:
+                          cubit.isOwner ? const Text('You created this group — leaving ends it for everyone') : null,
                       onTap: () async {
                         final ok = await AppFeedback.confirm(
                           context,
-                          title: 'Exit "${chat.name}"?',
-                          message: 'You will stop receiving messages from this group.',
-                          confirmLabel: 'Exit',
+                          title: cubit.isOwner ? 'End "${chat.name}"?' : 'Exit "${chat.name}"?',
+                          message:
+                              cubit.isOwner
+                                  ? 'You are the group owner. Leaving ends the group for everyone — nobody can '
+                                      'send messages in it anymore.'
+                                  : chat.secret
+                                  ? 'This is a secret group: you will need an admin to invite you back.'
+                                  : 'You can rejoin later from the chat, unless the group becomes secret.',
+                          confirmLabel: cubit.isOwner ? 'End group' : 'Exit',
                           destructive: true,
                         );
                         if (ok) await cubit.leave();

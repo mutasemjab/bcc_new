@@ -123,14 +123,20 @@ exports.onMessageCreated = onDocumentCreated("chats/{chatId}/messages/{messageId
   const chat = chatSnap.data();
 
   const muted = new Set(chat.mutedBy || []);
-  const recipients = (chat.participants || []).filter((u) => u !== message.senderId && !muted.has(u));
+  // Media from an anonymous member waits for approval: tell the admins only.
+  const audience = message.pendingApproval ? chat.admins || [] : chat.participants || [];
+  const recipients = audience.filter((u) => u !== message.senderId && !muted.has(u));
   if (!recipients.length) return;
 
   const sender = await db.collection("users").doc(message.senderId).get();
   const alias = (chat.anonymous || {})[message.senderId];
   const senderName = alias || (sender.exists && sender.get("name")) || "New message";
   const title = chat.isGroup ? chat.name || "Group" : senderName;
-  const body = chat.isGroup ? `${senderName}: ${previewOf(message)}` : previewOf(message);
+  const body = message.pendingApproval
+    ? `${senderName} sent ${previewOf(message)} — needs your approval`
+    : chat.isGroup
+      ? `${senderName}: ${previewOf(message)}`
+      : previewOf(message);
 
   // Android: data-only, so the app builds one grouped (WhatsApp-style)
   // notification per chat — even when the app is closed.

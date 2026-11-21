@@ -11,7 +11,11 @@ import '../../../../core/widgets/brand_logo.dart';
 import '../../../../core/widgets/pressable.dart';
 import '../../../auth/presentation/bloc/session/session_bloc.dart';
 import '../../../users/presentation/pages/link_phone_page.dart';
+import '../../../appointments/appointments.dart';
+import '../../../chat/presentation/starred.dart';
+import 'font_page.dart';
 import 'privacy_page.dart';
+import 'support_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -141,6 +145,40 @@ class SettingsPage extends StatelessWidget {
             subtitle: 'Default background for all chats',
             color: AppColors.primary,
             onTap: () => context.push(AppRoutes.wallpaper),
+          ),
+          _tile(
+            context,
+            Icons.font_download_rounded,
+            'Font',
+            subtitle: 'Font style and text size',
+            color: AppColors.primary,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FontPage())),
+          ),
+          _tile(
+            context,
+            Icons.star_rounded,
+            'Starred messages',
+            color: AppColors.warning,
+            onTap:
+                () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StarredMessagesPage())),
+          ),
+          _tile(
+            context,
+            Icons.event_note_rounded,
+            'Appointments',
+            subtitle: 'Saved appointments and reminders',
+            color: AppColors.online,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AppointmentsPage())),
+          ),
+        ]),
+        _section(context, 'Help', [
+          _tile(
+            context,
+            Icons.support_agent_rounded,
+            'Help & support',
+            subtitle: 'Contact us • Company info',
+            color: AppColors.primary,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SupportPage())),
           ),
         ]),
         _section(context, 'Privacy & security', [

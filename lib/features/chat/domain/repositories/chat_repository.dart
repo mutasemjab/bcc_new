@@ -86,4 +86,12 @@ abstract interface class ChatRepository {
   ResultFuture<void> deleteScheduled(String uid, String id);
   ResultFuture<void> dispatchScheduled(ScheduledMessage message);
   ResultFuture<List<MessageEntity>> recentHistory(String chatId);
+  ResultFuture<List<MessageEntity>> fullHistory(String chatId);
+
+  // ── Group lifecycle & moderation ───────────────────────────────────────
+  ResultFuture<void> endGroup(String chatId, String uid, String name);
+  ResultFuture<void> rejoinGroup(String chatId, String uid, String name, {String? alias});
+  ResultFuture<void> setSecret(String chatId, bool secret);
+  ResultFuture<void> setAutoClear(String chatId, String uid, bool on);
+  ResultFuture<void> reviewMedia(String chatId, String messageId, String adminId, {required bool approve});
 }

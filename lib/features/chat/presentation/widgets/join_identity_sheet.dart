@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/id_utils.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/pressable.dart';
 
@@ -93,4 +94,68 @@ class _Option extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Full "how do you want to join?" flow. Returns null if cancelled;
+/// `alias` is null when joining with the real name & number, otherwise the
+/// secret name the user chose.
+Future<({String? alias})?> chooseJoinIdentity(
+  BuildContext context, {
+  required String groupName,
+  required String myName,
+  String? myPhotoUrl,
+}) async {
+  final choice = await showJoinIdentitySheet(context, groupName: groupName, myName: myName, myPhotoUrl: myPhotoUrl);
+  if (choice == null || !context.mounted) return null;
+  if (choice == JoinIdentity.me) return (alias: null);
+  final alias = await askSecretName(context, realName: myName);
+  return alias == null ? null : (alias: alias);
+}
+
+/// Lets the user type their secret name (pre-filled with a random one).
+Future<String?> askSecretName(BuildContext context, {required String realName}) async {
+  final controller = TextEditingController(text: IdUtils.anonymousAlias());
+  String? error;
+  final result = await showDialog<String>(
+    context: context,
+    builder:
+        (ctx) => StatefulBuilder(
+          builder:
+              (ctx, setState) => AlertDialog(
+                title: const Text('Your secret name'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Members will see this name instead of your real name and number.'),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      maxLength: 30,
+                      decoration: InputDecoration(errorText: error, counterText: ''),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  FilledButton(
+                    onPressed: () {
+                      final v = controller.text.trim();
+                      if (v.length < 2) {
+                        setState(() => error = 'At least 2 characters');
+                      } else if (v.toLowerCase() == realName.trim().toLowerCase()) {
+                        setState(() => error = "Don't use your real name");
+                      } else {
+                        Navigator.pop(ctx, v);
+                      }
+                    },
+                    child: const Text('Join'),
+                  ),
+                ],
+              ),
+        ),
+  );
+  controller.dispose();
+  return result;
 }

@@ -26,6 +26,7 @@ class OutgoingMessage extends Equatable {
     this.existingMediaUrl,
     this.forwardCount = 0,
     this.viewOnce = false,
+    this.pendingApproval = false,
   });
 
   final String chatId;
@@ -51,6 +52,9 @@ class OutgoingMessage extends Equatable {
   final String? existingMediaUrl;
   final int forwardCount;
   final bool viewOnce;
+
+  /// Anonymous member's media — hidden from members until an admin approves.
+  final bool pendingApproval;
 
   bool get hasMedia => file != null;
 

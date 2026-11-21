@@ -8,6 +8,7 @@ import '../../domain/entities/chat_entity.dart';
 import '../../domain/entities/group_invite.dart';
 import '../../domain/usecases/chat_extras.dart';
 import '../bloc/group/group_info_cubit.dart';
+import 'join_identity_sheet.dart';
 
 /// Shows how I appear in the group and lets me reveal / hide my identity.
 class GroupIdentityCard extends StatelessWidget {
@@ -20,6 +21,7 @@ class GroupIdentityCard extends StatelessWidget {
     final myId = cubit.me.id;
     final alias = chat.aliasOf(myId);
     final hideAgainAt = chat.canHideAgainAt(myId);
+    final isAdmin = chat.isAdmin(myId);
     final secondary = TextStyle(color: context.palette.textSecondary, fontSize: 13, height: 1.35);
 
     return Container(
@@ -54,6 +56,8 @@ class GroupIdentityCard extends StatelessWidget {
               '${GroupMembership.formatUntil(hideAgainAt)}.',
               style: secondary,
             )
+          else if (isAdmin)
+            Text('Admins are always shown with their real name to all members.', style: secondary)
           else
             Text("You can hide your name and photo from this group's members.", style: secondary),
           const SizedBox(height: 8),
@@ -78,7 +82,7 @@ class GroupIdentityCard extends StatelessWidget {
                     )
                     : OutlinedButton.icon(
                       onPressed:
-                          hideAgainAt != null
+                          hideAgainAt != null || isAdmin
                               ? null
                               : () async {
                                 final ok = await AppFeedback.confirm(
@@ -89,7 +93,9 @@ class GroupIdentityCard extends StatelessWidget {
                                       'including on messages you already sent.',
                                   confirmLabel: 'Go anonymous',
                                 );
-                                if (ok) await cubit.hideIdentity();
+                                if (!ok || !context.mounted) return;
+                                final alias = await askSecretName(context, realName: cubit.me.name);
+                                if (alias != null) await cubit.hideIdentity(alias: alias);
                               },
                       icon: const Icon(Icons.visibility_off_rounded),
                       label: Text(

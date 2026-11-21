@@ -76,7 +76,22 @@ Future<AttachmentKind?> showAttachmentSheet(BuildContext context) {
   );
 }
 
-enum MessageAction { reply, forward, copy, edit, pin, unpin, deleteForMe, deleteForEveryone, info, moreReactions }
+enum MessageAction {
+  reply,
+  replyPrivately,
+  forward,
+  copy,
+  edit,
+  star,
+  unstar,
+  pin,
+  unpin,
+  addAppointment,
+  deleteForMe,
+  deleteForEveryone,
+  info,
+  moreReactions,
+}
 
 /// Like WhatsApp: "Delete for everyone" is possible for a limited time.
 const kDeleteForEveryoneWindow = Duration(hours: 2);
@@ -98,6 +113,8 @@ Future<MessageActionResult?> showMessageActions(
   required String? myReaction,
   bool isPinned = false,
   bool canPin = true,
+  bool isStarred = false,
+  bool canReplyPrivately = false,
 }) {
   final canEdit =
       isMine &&
@@ -177,7 +194,15 @@ Future<MessageActionResult?> showMessageActions(
                   ),
                 ),
               if (!message.deletedForEveryone) _action(ctx, Icons.reply_rounded, 'Reply', MessageAction.reply),
+              if (canReplyPrivately)
+                _action(ctx, Icons.quickreply_rounded, 'Reply privately', MessageAction.replyPrivately),
               if (canForward) _action(ctx, Icons.shortcut_rounded, 'Forward', MessageAction.forward),
+              if (!message.deletedForEveryone && message.type != MessageType.system)
+                isStarred
+                    ? _action(ctx, Icons.star_border_rounded, 'Unstar', MessageAction.unstar)
+                    : _action(ctx, Icons.star_rounded, 'Star', MessageAction.star),
+              if (message.type == MessageType.text && !message.deletedForEveryone)
+                _action(ctx, Icons.event_available_rounded, 'Add to appointments', MessageAction.addAppointment),
               if (message.type == MessageType.text && !message.deletedForEveryone)
                 _action(ctx, Icons.copy_rounded, 'Copy', MessageAction.copy),
               if (canEdit) _action(ctx, Icons.edit_rounded, 'Edit', MessageAction.edit),

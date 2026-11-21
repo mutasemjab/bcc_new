@@ -46,6 +46,10 @@ class ChatEntity extends Equatable {
     this.inviteCode,
     this.clearedAt = const {},
     this.deletedAt = const {},
+    this.secret = false,
+    this.closed = false,
+    this.formerMembers = const [],
+    this.autoClear = const {},
   });
 
   final String id;
@@ -94,6 +98,28 @@ class ChatEntity extends Equatable {
 
   /// uid → when they deleted the chat (hidden from their list until a newer message).
   final Map<String, DateTime> deletedAt;
+
+  /// Groups: "secret" (admin setting) — members can't share join links and
+  /// can't rejoin by themselves after leaving.
+  final bool secret;
+
+  /// Groups: ended by the owner (owner left). Read-only for everyone.
+  final bool closed;
+
+  /// Groups: people who left on their own (they may rejoin if not secret).
+  final List<String> formerMembers;
+
+  /// uid → clear this chat automatically every day.
+  final Map<String, bool> autoClear;
+
+  bool get isOwnerLess => createdBy == null;
+  bool isOwner(String uid) => createdBy == uid;
+  bool isFormerMember(String uid) => formerMembers.contains(uid) && !participants.contains(uid);
+  bool canRejoin(String uid) => isGroup && !secret && !closed && isFormerMember(uid);
+  bool autoClearsFor(String uid) => autoClear[uid] == true;
+
+  /// Non-admin members may share the join link only in non-secret groups.
+  bool canShareLink(String uid) => isGroup && !closed && (isAdmin(uid) || (!secret && participants.contains(uid)));
 
   /// Whether [uid] deleted this chat and nothing new arrived since.
   bool isDeletedFor(String uid) {
@@ -158,6 +184,10 @@ class ChatEntity extends Equatable {
     inviteCode,
     clearedAt,
     deletedAt,
+    secret,
+    closed,
+    formerMembers,
+    autoClear,
   ];
 }
 
