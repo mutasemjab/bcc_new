@@ -17,13 +17,19 @@ import '../../../chat/presentation/bloc/chat_list/chat_list_bloc.dart';
 import '../../../users/domain/entities/user_entity.dart';
 import '../../domain/entities/status_entity.dart';
 import '../bloc/status_bloc.dart';
+import 'status_editor_pages.dart';
 
 class StatusPage extends StatelessWidget {
   const StatusPage({super.key});
 
   Future<void> _addImage(BuildContext context) async {
     final file = await sl<MediaPickerService>().pickImage();
-    if (file != null && context.mounted) context.push(AppRoutes.statusImage, extra: file);
+    if (file == null || !context.mounted) return;
+    // Opened directly (not via the router) so the picked photo can't get lost
+    // when the app resumes from the gallery.
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => ImageStatusEditorPage(image: file)),
+    );
   }
 
   @override

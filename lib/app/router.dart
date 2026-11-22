@@ -88,7 +88,15 @@ GoRouter buildRouter(SessionBloc session) {
         // The picked photo is passed in memory; if Android restarted the app while
         // the gallery was open it is gone, so go back instead of crashing.
         redirect: (_, s) => s.extra is File ? null : AppRoutes.home,
-        pageBuilder: (_, s) => _fadePage(s, ImageStatusEditorPage(image: s.extra! as File)),
+        // While this page is closing the router may rebuild it without the
+        // photo — show an empty page then instead of crashing.
+        pageBuilder:
+            (_, s) => _fadePage(
+              s,
+              s.extra is File
+                  ? ImageStatusEditorPage(image: s.extra! as File)
+                  : const Scaffold(backgroundColor: Colors.black),
+            ),
       ),
       GoRoute(
         path: '/status/view/:userId',
@@ -109,7 +117,13 @@ GoRouter buildRouter(SessionBloc session) {
       ),
       GoRoute(
         path: '/incoming-call/:callId',
-        pageBuilder: (_, s) => _fadePage(s, IncomingCallPage(call: s.extra! as CallEntity)),
+        pageBuilder:
+            (_, s) => _fadePage(
+              s,
+              s.extra is CallEntity
+                  ? IncomingCallPage(call: s.extra! as CallEntity)
+                  : const Scaffold(backgroundColor: Colors.black),
+            ),
       ),
     ],
   );

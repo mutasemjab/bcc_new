@@ -144,7 +144,7 @@ class _ImageStatusEditorPageState extends State<ImageStatusEditorPage> {
                   _SendFab(
                     onTap: () {
                       context.read<StatusBloc>().add(ImageStatusPosted(widget.image, _caption.text));
-                      context.pop();
+                      Navigator.of(context).pop();
                     },
                   ),
                 ],
