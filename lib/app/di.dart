@@ -43,6 +43,7 @@ import '../features/chat/presentation/foreground_notifier.dart';
 import '../features/appointments/appointments.dart';
 import '../features/chat/presentation/scheduled_dispatcher.dart';
 import '../features/chat/presentation/auto_clear.dart';
+import '../features/chat/presentation/email_invites.dart';
 import '../features/chat/presentation/starred.dart';
 import '../features/chat/presentation/widgets/stickers/my_stickers_store.dart';
 import '../features/status/data/datasources/status_remote_data_source.dart';
@@ -84,6 +85,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => AppearanceSettings(sl()))
     ..registerLazySingleton(() => PhoneLinker(sl(), sl()))
     ..registerLazySingleton(() => StarredStore(sl()))
+    ..registerLazySingleton(() => EmailInviteClaimer(sl(), sl()))
     ..registerLazySingleton(() => AutoClearService(sl()))
     ..registerLazySingleton(() => AppointmentsStore(sl()))
     ..registerLazySingleton(() => PushService(sl()))

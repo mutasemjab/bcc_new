@@ -50,6 +50,7 @@ class ChatEntity extends Equatable {
     this.closed = false,
     this.formerMembers = const [],
     this.autoClear = const {},
+    this.invitedEmails = const [],
   });
 
   final String id;
@@ -109,6 +110,13 @@ class ChatEntity extends Equatable {
   /// Groups: people who left on their own (they may rejoin if not secret).
   final List<String> formerMembers;
 
+  /// Groups: emails of people invited before they had an account. They get
+  /// the invitation once they sign up (and verify) with that email.
+  final List<String> invitedEmails;
+
+  /// Everyone still waiting to join (accounts + email-only).
+  int get pendingInviteCount => invited.length + invitedEmails.length;
+
   /// uid → clear this chat automatically every day.
   final Map<String, bool> autoClear;
 
@@ -150,7 +158,8 @@ class ChatEntity extends Equatable {
     return until.isAfter(now ?? DateTime.now()) ? until : null;
   }
 
-  int unreadFor(String uid) => unread[uid] ?? 0;
+  /// Groups I left can't be marked read anymore → never count them as unread.
+  int unreadFor(String uid) => isGroup && !participants.contains(uid) ? 0 : (unread[uid] ?? 0);
   bool isAdmin(String uid) => admins.contains(uid);
   bool isPinnedFor(String uid) => pinnedBy.contains(uid);
   bool isMutedFor(String uid) => mutedBy.contains(uid);
@@ -188,6 +197,7 @@ class ChatEntity extends Equatable {
     closed,
     formerMembers,
     autoClear,
+    invitedEmails,
   ];
 }
 

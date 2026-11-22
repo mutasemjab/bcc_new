@@ -22,6 +22,7 @@ import '../../domain/usecases/group_usecases.dart';
 import '../bloc/group/group_info_cubit.dart';
 import '../../../../core/utils/id_utils.dart';
 import '../chat_actions.dart';
+import '../email_invites.dart';
 import '../widgets/group_identity_widgets.dart';
 import 'create_group_page.dart';
 
@@ -113,6 +114,31 @@ class _GroupInfoView extends StatelessWidget {
       ),
     );
     if (chosen != null && chosen.isNotEmpty) await cubit.addMembers(chosen);
+  }
+
+  Future<void> _inviteByEmail(BuildContext context, GroupInfoCubit cubit) async {
+    final emails = await showEmailInviteSheet(context);
+    if (emails == null || emails.isEmpty || !context.mounted) return;
+    final res = await cubit.inviteByEmail(emails);
+    if (res == null || !context.mounted) return;
+    final chat = cubit.state.chat!;
+    final send = await AppFeedback.confirm(
+      context,
+      title: 'Invitations added',
+      message:
+          '${res.existing} already on BCC Chat (they got the invitation in the app) • '
+          '${res.pending} without the app yet.\n\nSend them an invitation email now from your email app?',
+      confirmLabel: 'Send email',
+    );
+    if (!send || !context.mounted) return;
+    await sendInvitationEmails(
+      context,
+      emails: emails,
+      groupName: chat.name ?? 'Group',
+      inviterName: cubit.myDisplayName,
+      chatId: chat.id,
+      inviteCode: chat.inviteCode,
+    );
   }
 
   void _memberOptions(BuildContext context, GroupInfoCubit cubit, UserEntity user) {
@@ -360,6 +386,18 @@ class _GroupInfoView extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (cubit.isAdmin && !chat.closed)
+                SliverToBoxAdapter(
+                  child: _Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.alternate_email_rounded, color: AppColors.primary),
+                      title: const Text('Invite by email'),
+                      subtitle: const Text("Also for people who don't have the app yet"),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => _inviteByEmail(context, cubit),
+                    ),
+                  ),
+                ),
               if (chat.canShareLink(cubit.me.id))
                 SliverToBoxAdapter(
                   child: _Card(
@@ -374,33 +412,55 @@ class _GroupInfoView extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (chat.invited.isNotEmpty) ...[
+              if (chat.pendingInviteCount > 0) ...[
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
                     child: Text(
-                      '${chat.invited.length} PENDING INVITATIONS',
+                      '${chat.pendingInviteCount} PENDING INVITATIONS',
                       style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.1),
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: _Card(
-                    child: Column(
-                      children: [
-                        for (final u in state.invitedUsers())
-                          UserTile(
-                            user: u,
-                            subtitle: 'Invited • waiting for answer',
-                            trailing:
-                                cubit.isAdmin
-                                    ? TextButton(onPressed: () => cubit.cancelInvite(u), child: const Text('Cancel'))
-                                    : null,
-                          ),
-                      ],
+                if (cubit.isAdmin)
+                  SliverToBoxAdapter(
+                    child: _Card(
+                      child: Column(
+                        children: [
+                          for (final u in state.invitedUsers())
+                            UserTile(
+                              user: u,
+                              subtitle: 'Invited • waiting for answer',
+                              trailing: TextButton(onPressed: () => cubit.cancelInvite(u), child: const Text('Cancel')),
+                            ),
+                          for (final e in chat.invitedEmails)
+                            ListTile(
+                              leading: const CircleAvatar(child: Icon(Icons.alternate_email_rounded)),
+                              title: Text(e, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              subtitle: const Text('Invited by email • no account yet'),
+                              trailing: TextButton(
+                                onPressed: () => cubit.cancelEmailInvite(e),
+                                child: const Text('Cancel'),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  // Members only see how many people were invited — not who.
+                  SliverToBoxAdapter(
+                    child: _Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.hourglass_top_rounded),
+                        title: Text(
+                          chat.pendingInviteCount == 1
+                              ? '1 person invited — waiting to join'
+                              : '${chat.pendingInviteCount} people invited — waiting to join',
+                        ),
+                      ),
                     ),
                   ),
-                ),
               ],
               SliverToBoxAdapter(
                 child: Padding(
@@ -450,7 +510,21 @@ class _GroupInfoView extends StatelessWidget {
                   ),
                 ),
               ),
-              if (amIMember)
+              if (chat.closed)
+                SliverToBoxAdapter(
+                  child: _Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                      title: const Text(
+                        'Delete group',
+                        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: const Text('This group has ended. Remove it from your chats.'),
+                      onTap: () => ChatActions.deleteChat(context, chat.id, cubit.me.id),
+                    ),
+                  ),
+                ),
+              if (amIMember && !chat.closed)
                 SliverToBoxAdapter(
                   child: _Card(
                     child: ListTile(

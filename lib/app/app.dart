@@ -20,6 +20,7 @@ import '../features/chat/presentation/foreground_notifier.dart';
 import '../features/appointments/appointments.dart';
 import '../features/chat/presentation/scheduled_dispatcher.dart';
 import '../features/chat/presentation/auto_clear.dart';
+import '../features/chat/presentation/email_invites.dart';
 import '../features/chat/presentation/starred.dart';
 import '../features/status/presentation/bloc/status_bloc.dart';
 import '../features/users/presentation/block_list.dart';
@@ -165,6 +166,8 @@ class _SessionCoordinator extends StatelessWidget {
               sl<ScheduledDispatcher>().start(uid);
               sl<BlockList>().start(uid);
               sl<StarredStore>().start(uid);
+              // Group invitations sent to my email before I had an account.
+              sl<EmailInviteClaimer>().start();
               sl<AppointmentsStore>().start(uid);
               // Background contact discovery (cached on the device).
               sl<ContactSync>().start(uid, myPhone: state.user.phone);
@@ -177,6 +180,7 @@ class _SessionCoordinator extends StatelessWidget {
               sl<ForegroundNotifier>().reset();
               sl<BlockList>().stop();
               sl<StarredStore>().stop();
+              sl<EmailInviteClaimer>().stop();
               sl<AppointmentsStore>().stop();
               sl<ContactSync>().stop();
               context.read<StatusBloc>().add(const StatusFeedStopped());

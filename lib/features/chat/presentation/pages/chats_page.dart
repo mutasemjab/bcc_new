@@ -9,6 +9,8 @@ import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../domain/entities/chat_entity.dart';
 import '../bloc/chat_list/chat_list_bloc.dart';
+import '../chat_actions.dart';
+import '../email_invites.dart';
 import '../widgets/chat_tile.dart';
 import '../widgets/group_invitations.dart';
 
@@ -60,6 +62,7 @@ class ChatsPage extends StatelessWidget {
               ),
             ),
             SliverToBoxAdapter(child: _FilterChips(state: state)),
+            const SliverToBoxAdapter(child: VerifyEmailBanner()),
             if (state.uid.isNotEmpty) SliverToBoxAdapter(child: GroupInvitationsSection(uid: state.uid)),
             if (state.status == ChatListStatus.loading || state.status == ChatListStatus.idle)
               const SliverFillRemaining(child: ChatListSkeleton())
@@ -139,6 +142,16 @@ class ChatsPage extends StatelessWidget {
                     Navigator.pop(ctx);
                   },
                 ),
+                // Ended group, or one I left → remove it from my list.
+                if (chat.isGroup && (chat.closed || !chat.participants.contains(state.uid)))
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                    title: const Text('Delete group', style: TextStyle(color: AppColors.danger)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ChatActions.deleteChat(context, chat.id, state.uid);
+                    },
+                  ),
                 if (chat.isGroup)
                   ListTile(
                     leading: const Icon(Icons.info_outline_rounded),

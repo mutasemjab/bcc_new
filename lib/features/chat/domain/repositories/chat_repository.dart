@@ -71,6 +71,14 @@ abstract interface class ChatRepository {
   ResultFuture<void> acceptInvite(String chatId, String uid, String name, {String? alias});
   ResultFuture<void> declineInvite(String chatId, String uid);
   ResultFuture<void> cancelInvite(String chatId, String uid);
+  ResultFuture<({int existing, int pending})> inviteByEmail(
+    String chatId,
+    List<String> emails,
+    String actorId,
+    String actorName,
+  );
+  ResultFuture<void> cancelEmailInvite(String chatId, String email);
+  ResultFuture<int> claimEmailInvites(String uid, String email);
   ResultFuture<void> revealIdentity(String chatId, String uid, String name, String alias);
   ResultFuture<void> hideIdentity(String chatId, String uid, String name, String alias);
   ResultFuture<String> createInviteLink(String chatId);

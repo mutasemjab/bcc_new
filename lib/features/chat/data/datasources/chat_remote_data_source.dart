@@ -343,6 +343,59 @@ class ChatRemoteDataSource {
         for (final u in uids) 'invitedBy.$u': actorId,
       });
 
+  /// Invites people by email. Emails that already have an account become a
+  /// normal invitation; the rest wait in `invitedEmails` until that person
+  /// signs up with the same (verified) email.
+  Future<({int existing, int pending})> inviteByEmail(
+    String chatId,
+    List<String> emails,
+    String actorId,
+    String actorName,
+  ) async {
+    final wanted = {for (final e in emails) e.trim().toLowerCase()}..removeWhere((e) => e.isEmpty);
+    if (wanted.isEmpty) return (existing: 0, pending: 0);
+    final chat = (await _chats.doc(chatId).get()).data() ?? const {};
+    final members = {...List<String>.from(chat['participants'] as List<dynamic>? ?? const [])};
+    final list = wanted.toList();
+    final found = <String, String>{}; // email → uid
+    for (var i = 0; i < list.length; i += 30) {
+      final chunk = list.sublist(i, i + 30 > list.length ? list.length : i + 30);
+      final snap = await _db.collection(FirestorePaths.users).where('email', whereIn: chunk).get();
+      for (final d in snap.docs) {
+        final email = (d.data()['email'] as String?)?.toLowerCase();
+        if (email != null) found[email] = d.id;
+      }
+    }
+    final uids = found.values.where((u) => !members.contains(u) && u != actorId).toSet().toList();
+    final pending = wanted.where((e) => !found.containsKey(e)).toList();
+    final total = uids.length + pending.length;
+    if (total == 0) return (existing: 0, pending: 0);
+    await _groupChange(chatId, actorId, '$actorName invited ${total == 1 ? '1 person' : '$total people'}', {
+      if (uids.isNotEmpty) 'invited': FieldValue.arrayUnion(uids),
+      for (final u in uids) 'invitedBy.$u': actorId,
+      if (pending.isNotEmpty) 'invitedEmails': FieldValue.arrayUnion(pending),
+    });
+    return (existing: uids.length, pending: pending.length);
+  }
+
+  Future<void> cancelEmailInvite(String chatId, String email) => _chats.doc(chatId).update({
+    'invitedEmails': FieldValue.arrayRemove([email]),
+  });
+
+  /// After sign-up: turn "invited by email" into a normal invitation for me.
+  Future<int> claimEmailInvites(String uid, String email) async {
+    final snap = await _chats.where('invitedEmails', arrayContains: email).get();
+    for (final d in snap.docs) {
+      final inviter = (d.data()['createdBy'] as String?) ?? '';
+      await d.reference.update({
+        'invitedEmails': FieldValue.arrayRemove([email]),
+        'invited': FieldValue.arrayUnion([uid]),
+        if (inviter.isNotEmpty) 'invitedBy.$uid': inviter,
+      });
+    }
+    return snap.docs.length;
+  }
+
   Future<void> cancelInvite(String chatId, String uid) => _chats.doc(chatId).update({
     'invited': FieldValue.arrayRemove([uid]),
     'invitedBy.$uid': FieldValue.delete(),
@@ -425,6 +478,9 @@ class ChatRemoteDataSource {
           ..update(_chats.doc(chatId), {
             'closed': true,
             'closedAt': FieldValue.serverTimestamp(),
+            // Gone from the owner's chat list right away.
+            'clearedAt.$uid': FieldValue.serverTimestamp(),
+            'deletedAt.$uid': FieldValue.serverTimestamp(),
             'inviteCode': FieldValue.delete(),
             'lastMessage': _lastMessage(msgRef.id, uid, MessageType.system, notice),
             'updatedAt': FieldValue.serverTimestamp(),

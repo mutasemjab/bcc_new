@@ -90,7 +90,7 @@ service cloud.firestore {
       function adminEdit() {
         return isGroup() && isAdmin() && !resource.data.get('closed', false)
           && onlyChanges(['name', 'description', 'photoUrl', 'participants', 'admins', 'unread', 'lastMessage', 'updatedAt',
-                         'invited', 'invitedBy', 'inviteCode', 'secret'])
+                         'invited', 'invitedBy', 'inviteCode', 'secret', 'invitedEmails'])
           // Admins are always public: an anonymous member can't be made admin.
           && !request.resource.data.get('admins', []).hasAny(request.resource.data.get('anonymous', {}).keys());
       }
@@ -99,7 +99,32 @@ service cloud.firestore {
       function endingGroup() {
         return isGroup() && resource.data.get('createdBy', '') == uid()
           && request.resource.data.closed == true
-          && onlyChanges(['closed', 'closedAt', 'inviteCode', 'lastMessage', 'updatedAt']);
+          && ownKeyOnly('clearedAt') && ownKeyOnly('deletedAt')
+          && onlyChanges(['closed', 'closedAt', 'inviteCode', 'lastMessage', 'updatedAt', 'clearedAt', 'deletedAt']);
+      }
+
+      // My (verified) email was invited before I had an account.
+      function myVerifiedEmail() {
+        return request.auth.token.get('email_verified', false) == true ? request.auth.token.get('email', '') : '';
+      }
+
+      // Turn "invited by email" into a normal invitation for myself.
+      function claimingEmailInvite() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let email = myVerifiedEmail();
+        return isGroup() && email != '' && email in before.get('invitedEmails', [])
+          && after.get('invitedEmails', []).toSet() == before.get('invitedEmails', []).toSet().difference([email].toSet())
+          && after.get('invited', []).toSet() == before.get('invited', []).toSet().union([uid()].toSet())
+          && ownKeyOnly('invitedBy')
+          && onlyChanges(['invitedEmails', 'invited', 'invitedBy']);
+      }
+
+      // Someone who left a group may still clear / delete it from their list.
+      function formerMemberCleanup() {
+        return uid() in resource.data.get('formerMembers', [])
+          && ownKeyOnly('clearedAt') && ownKeyOnly('deletedAt') && ownKeyOnly('unread')
+          && onlyChanges(['clearedAt', 'deletedAt', 'unread']);
       }
 
       // Members may share the join link of a non-secret group.
@@ -192,14 +217,17 @@ service cloud.firestore {
 
       // Plain field access so the "my invitations" query (array-contains) is provable.
       allow read: if signedIn() && (resource == null || isMember() || uid() in resource.data.invited
-                                     || uid() in resource.data.formerMembers);
+                                     || uid() in resource.data.formerMembers
+                                     || (request.auth.token.email_verified == true
+                                         && request.auth.token.email in resource.data.invitedEmails));
       allow create: if signedIn()
         && uid() in request.resource.data.participants
         && (validDirectCreate() || validGroupCreate());
       allow update: if signedIn() && (
         (isMember() && (memberActivity() || adminEdit() || leaving() || changingIdentity()
                         || endingGroup() || memberSharesLink()))
-        || acceptingInvite() || decliningInvite() || joiningWithLink() || rejoining()
+        || acceptingInvite() || decliningInvite() || joiningWithLink() || rejoining() || formerMemberCleanup()
+        || claimingEmailInvite()
       );
       allow delete: if false;
 
@@ -271,9 +299,6 @@ service cloud.firestore {
     // ── Group join links ──────────────────────────────────────────────
     // The code is unguessable, so knowing it is what grants the preview.
     match /groupInvites/{code} {
-      function adminOf(cid) {
-        return uid() in get(/databases/$(database)/documents/chats/$(cid)).data.get('admins', []);
-      }
       function mayShare(cid) {
         let chat = get(/databases/$(database)/documents/chats/$(cid)).data;
         return uid() in chat.get('admins', [])

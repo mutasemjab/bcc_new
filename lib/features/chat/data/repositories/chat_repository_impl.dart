@@ -212,4 +212,19 @@ class ChatRepositoryImpl implements ChatRepository {
 
   @override
   ResultFuture<List<MessageEntity>> fullHistory(String chatId) => guard(() => _remote.fullHistory(chatId));
+
+  @override
+  ResultFuture<({int existing, int pending})> inviteByEmail(
+    String chatId,
+    List<String> emails,
+    String actorId,
+    String actorName,
+  ) => guard(() => _remote.inviteByEmail(chatId, emails, actorId, actorName));
+
+  @override
+  ResultFuture<void> cancelEmailInvite(String chatId, String email) =>
+      guard(() => _remote.cancelEmailInvite(chatId, email));
+
+  @override
+  ResultFuture<int> claimEmailInvites(String uid, String email) => guard(() => _remote.claimEmailInvites(uid, email));
 }

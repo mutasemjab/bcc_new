@@ -1,5 +1,6 @@
 import 'package:bcc_chat/features/chat/domain/entities/chat_entity.dart';
 import 'package:bcc_chat/features/chat/domain/entities/message_entity.dart';
+import 'package:bcc_chat/features/chat/domain/usecases/chat_extras.dart';
 import 'package:bcc_chat/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,5 +60,37 @@ void main() {
     test('markers inside words are left alone', () {
       expect(plain(formattedSpans('snake_case_name 2*3*4')), 'snake_case_name 2*3*4');
     });
+  });
+
+  group('email invitations', () {
+    test('parses any pasted list, de-duplicated and lower-case', () {
+      final emails = GroupMembership.parseEmails(
+        'Ali@Mail.com, sara@x.io\nbad@ ; ali@mail.com other text ahmad.k+1@site.co',
+      );
+      expect(emails, ['ali@mail.com', 'sara@x.io', 'ahmad.k+1@site.co']);
+    });
+
+    test('pending count includes email-only invitations', () {
+      const chat = ChatEntity(
+        id: 'g',
+        isGroup: true,
+        participants: ['a'],
+        invited: ['b'],
+        invitedEmails: ['c@x.io', 'd@x.io'],
+      );
+      expect(chat.pendingInviteCount, 3);
+    });
+  });
+
+  test('a group I left never shows unread', () {
+    const chat = ChatEntity(
+      id: 'g',
+      isGroup: true,
+      participants: ['a'],
+      unread: {'me': 5, 'a': 2},
+      formerMembers: ['me'],
+    );
+    expect(chat.unreadFor('me'), 0);
+    expect(chat.unreadFor('a'), 2);
   });
 }

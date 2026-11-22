@@ -23,6 +23,25 @@ class GroupMembership {
   ResultFuture<void> decline(String chatId, String uid) => _repo.declineInvite(chatId, uid);
   ResultFuture<void> cancelInvite(String chatId, String uid) => _repo.cancelInvite(chatId, uid);
 
+  /// Valid, de-duplicated, lower-case emails from any pasted text.
+  static List<String> parseEmails(String text) {
+    final re = RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}');
+    return {for (final m in re.allMatches(text)) m.group(0)!.toLowerCase()}.toList();
+  }
+
+  ResultFuture<({int existing, int pending})> inviteByEmail(
+    String chatId,
+    List<String> emails,
+    String actorId,
+    String actorName,
+  ) {
+    if (emails.length > 256) return Future.value(const Left(ValidationFailure('Up to 256 emails at a time.')));
+    return _repo.inviteByEmail(chatId, emails, actorId, actorName);
+  }
+
+  ResultFuture<void> cancelEmailInvite(String chatId, String email) => _repo.cancelEmailInvite(chatId, email);
+  ResultFuture<int> claimEmailInvites(String uid, String email) => _repo.claimEmailInvites(uid, email);
+
   ResultFuture<void> reveal(ChatEntity chat, String uid, String name) {
     final alias = chat.aliasOf(uid);
     if (alias == null) return Future.value(const Right(null));

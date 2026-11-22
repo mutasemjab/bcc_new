@@ -18,7 +18,9 @@ import '../../../users/presentation/bloc/user_search/user_search_cubit.dart';
 import '../../../users/presentation/contact_sync.dart';
 import '../../../users/presentation/pages/invite_contacts_page.dart';
 import '../../../users/presentation/widgets/user_tile.dart';
+import '../../domain/usecases/chat_extras.dart';
 import '../../domain/usecases/group_usecases.dart';
+import '../email_invites.dart';
 import '../bloc/chat_list/chat_list_bloc.dart';
 import '../bloc/group/create_group_cubit.dart';
 
@@ -31,14 +33,39 @@ class CreateGroupPage extends StatelessWidget {
     if (session is! SessionAuthenticated) return const Scaffold();
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => CreateGroupCubit(sl<CreateGroup>(), me: session.user)),
+        BlocProvider(create: (_) => CreateGroupCubit(sl<CreateGroup>(), sl<GroupMembership>(), me: session.user)),
         BlocProvider(create: (_) => UserSearchCubit(sl<SearchUsers>(), session.user.id)),
       ],
       child: BlocConsumer<CreateGroupCubit, CreateGroupState>(
         listener: (context, state) {
           if (state.error != null) AppFeedback.error(context, state.error!);
           if (state.status == CreateGroupStatus.created && state.chatId != null) {
-            context.pushReplacement(AppRoutes.conversation(state.chatId!));
+            final chatId = state.chatId!;
+            if (state.emails.isEmpty) {
+              context.pushReplacement(AppRoutes.conversation(chatId));
+              return;
+            }
+            // Offer to email the invitations, then open the new group.
+            () async {
+              final send = await AppFeedback.confirm(
+                context,
+                title: 'Email the invitations?',
+                message:
+                    'Send an invitation email to the ${state.emails.length} people you added, from your email app. '
+                    'It explains how to download the app and join.',
+                confirmLabel: 'Send email',
+              );
+              if (send && context.mounted) {
+                await sendInvitationEmails(
+                  context,
+                  emails: state.emails,
+                  groupName: context.read<CreateGroupCubit>().createdName ?? 'the group',
+                  inviterName: session.user.name,
+                  chatId: chatId,
+                );
+              }
+              if (context.mounted) context.pushReplacement(AppRoutes.conversation(chatId));
+            }();
           }
         },
         builder:
@@ -205,14 +232,16 @@ class _MembersStep extends StatelessWidget {
           children: [
             const Text('New group'),
             Text(
-              state.selected.isEmpty ? 'Invite members' : '${state.selected.length} will be invited',
+              state.selected.isEmpty && state.emails.isEmpty
+                  ? 'Invite members'
+                  : '${state.selected.length + state.emails.length} will be invited',
               style: context.text.bodySmall,
             ),
           ],
         ),
       ),
       floatingActionButton: AnimatedScale(
-        scale: state.selected.isEmpty ? 0 : 1,
+        scale: state.selected.isEmpty && state.emails.isEmpty ? 0 : 1,
         duration: const Duration(milliseconds: 200),
         child: FloatingActionButton(
           backgroundColor: AppColors.primary,
@@ -223,6 +252,34 @@ class _MembersStep extends StatelessWidget {
       ),
       body: Column(
         children: [
+          ListTile(
+            leading: const Icon(Icons.alternate_email_rounded, color: AppColors.primary),
+            title: const Text('Invite by email'),
+            subtitle: Text(
+              state.emails.isEmpty
+                  ? "Also for people who don't have the app yet"
+                  : '${state.emails.length} email${state.emails.length == 1 ? '' : 's'} added',
+            ),
+            onTap: () async {
+              final emails = await showEmailInviteSheet(context);
+              if (emails != null) cubit.addEmails(emails);
+            },
+          ),
+          if (state.emails.isNotEmpty)
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final e in state.emails)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: InputChip(label: Text(e), onDeleted: () => cubit.removeEmail(e)),
+                    ),
+                ],
+              ),
+            ),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             child:

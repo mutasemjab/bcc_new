@@ -209,6 +209,25 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
 
   // ── Invitations & link ──
 
+  /// Returns how many were invited (null on error).
+  Future<({int existing, int pending})?> inviteByEmail(List<String> emails) async {
+    emit(state.copyWith(busy: true));
+    final r = await _membership.inviteByEmail(chatId, emails, me.id, myDisplayName);
+    return r.fold(
+      (f) {
+        emit(state.copyWith(busy: false, message: f.message));
+        return null;
+      },
+      (res) {
+        emit(state.copyWith(busy: false));
+        return res;
+      },
+    );
+  }
+
+  Future<void> cancelEmailInvite(String email) =>
+      _run(() => _membership.cancelEmailInvite(chatId, email), success: 'Invitation cancelled');
+
   Future<void> cancelInvite(UserEntity user) =>
       _run(() => _membership.cancelInvite(chatId, user.id), success: 'Invitation cancelled');
 

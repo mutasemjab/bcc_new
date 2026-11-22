@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../users/domain/entities/user_entity.dart';
+import '../../../domain/usecases/chat_extras.dart';
 import '../../../domain/usecases/group_usecases.dart';
 
 enum CreateGroupStep { members, details }
@@ -14,6 +15,7 @@ class CreateGroupState extends Equatable {
   const CreateGroupState({
     this.step = CreateGroupStep.members,
     this.selected = const [],
+    this.emails = const [],
     this.photo,
     this.status = CreateGroupStatus.editing,
     this.chatId,
@@ -22,6 +24,9 @@ class CreateGroupState extends Equatable {
 
   final CreateGroupStep step;
   final List<UserEntity> selected;
+
+  /// People invited by email (may not have the app yet).
+  final List<String> emails;
   final File? photo;
   final CreateGroupStatus status;
   final String? chatId;
@@ -32,6 +37,7 @@ class CreateGroupState extends Equatable {
   CreateGroupState copyWith({
     CreateGroupStep? step,
     List<UserEntity>? selected,
+    List<String>? emails,
     File? photo,
     CreateGroupStatus? status,
     String? chatId,
@@ -39,6 +45,7 @@ class CreateGroupState extends Equatable {
   }) => CreateGroupState(
     step: step ?? this.step,
     selected: selected ?? this.selected,
+    emails: emails ?? this.emails,
     photo: photo ?? this.photo,
     status: status ?? this.status,
     chatId: chatId ?? this.chatId,
@@ -46,13 +53,14 @@ class CreateGroupState extends Equatable {
   );
 
   @override
-  List<Object?> get props => [step, selected, photo?.path, status, chatId, error];
+  List<Object?> get props => [step, selected, emails, photo?.path, status, chatId, error];
 }
 
 class CreateGroupCubit extends Cubit<CreateGroupState> {
-  CreateGroupCubit(this._createGroup, {required this.me}) : super(const CreateGroupState());
+  CreateGroupCubit(this._createGroup, this._membership, {required this.me}) : super(const CreateGroupState());
 
   final CreateGroup _createGroup;
+  final GroupMembership _membership;
   final UserEntity me;
 
   void toggle(UserEntity user) {
@@ -61,9 +69,13 @@ class CreateGroupCubit extends Cubit<CreateGroupState> {
     emit(state.copyWith(selected: selected));
   }
 
+  void addEmails(List<String> emails) => emit(state.copyWith(emails: {...state.emails, ...emails}.toList()));
+
+  void removeEmail(String email) => emit(state.copyWith(emails: state.emails.where((e) => e != email).toList()));
+
   void next() {
-    if (state.selected.isEmpty) {
-      emit(state.copyWith(error: 'Select at least one member.'));
+    if (state.selected.isEmpty && state.emails.isEmpty) {
+      emit(state.copyWith(error: 'Select at least one member or add an email.'));
       return;
     }
     emit(state.copyWith(step: CreateGroupStep.details));
@@ -73,7 +85,11 @@ class CreateGroupCubit extends Cubit<CreateGroupState> {
 
   void setPhoto(File file) => emit(state.copyWith(photo: file));
 
+  /// Name of the group just created (for the invitation email).
+  String? createdName;
+
   Future<void> create({required String name, String? description}) async {
+    createdName = name;
     emit(state.copyWith(status: CreateGroupStatus.creating));
     final result = await _createGroup(
       CreateGroupParams(
@@ -85,9 +101,9 @@ class CreateGroupCubit extends Cubit<CreateGroupState> {
         photo: state.photo,
       ),
     );
-    result.match(
-      (f) => emit(state.copyWith(status: CreateGroupStatus.failure, error: f.message)),
-      (id) => emit(state.copyWith(status: CreateGroupStatus.created, chatId: id)),
-    );
+    result.match((f) => emit(state.copyWith(status: CreateGroupStatus.failure, error: f.message)), (id) async {
+      if (state.emails.isNotEmpty) await _membership.inviteByEmail(id, state.emails, me.id, me.name);
+      emit(state.copyWith(status: CreateGroupStatus.created, chatId: id));
+    });
   }
 }

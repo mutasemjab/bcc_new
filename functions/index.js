@@ -21,6 +21,7 @@ const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const logger = require("firebase-functions/logger");
 const { RtcTokenBuilder, RtcRole } = require("agora-token");
+const nodemailer = require("nodemailer");
 
 initializeApp();
 const db = getFirestore();
@@ -282,10 +283,56 @@ exports.sendScheduledMessages = onSchedule("every 1 minutes", async () => {
 
 // ─────────────────────────── Group invitations ───────────────────────────
 
+/**
+ * Sends invitation emails (optional). Configure in functions/.env:
+ *   SMTP_USER=your.address@gmail.com
+ *   SMTP_PASS=<16-letter Gmail "App password">
+ *   DOWNLOAD_URL=https://play.google.com/store/apps/details?id=com.bccchat.ammar
+ * Without SMTP settings nothing is sent here — admins can still send the
+ * invitation from their own email app inside BCC Chat.
+ */
+async function sendInviteEmails(emails, groupName, inviterName) {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass || !emails.length) return;
+  const download = process.env.DOWNLOAD_URL || "https://play.google.com/store/apps/details?id=com.bccchat.ammar";
+  const transport = nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+  const subject = `${inviterName} invited you to "${groupName}" on BCC Chat`;
+  const text = [
+    "Hi!",
+    "",
+    `${inviterName} invited you to join the group "${groupName}" on BCC Chat.`,
+    "",
+    `1) Download the app: ${download}`,
+    "2) Sign up with THIS email address and confirm it.",
+    "3) The group invitation will be waiting for you in the app.",
+  ].join("\n");
+  // One email per person so addresses stay private.
+  for (const to of emails) {
+    try {
+      await transport.sendMail({ from: `BCC Chat <${user}>`, to, subject, text });
+    } catch (e) {
+      logger.warn("Invite email failed", { to, error: String(e) });
+    }
+  }
+}
+
 exports.onGroupInvite = onDocumentWritten("chats/{chatId}", async (event) => {
   const before = (event.data.before.exists && event.data.before.data()) || {};
   const after = (event.data.after.exists && event.data.after.data()) || null;
   if (!after || !after.isGroup) return;
+
+  // New email-only invitations → invitation emails.
+  const hadEmails = new Set(before.invitedEmails || []);
+  const newEmails = (after.invitedEmails || []).filter((e) => !hadEmails.has(e));
+  if (newEmails.length) {
+    let inviterName = "Someone";
+    if (after.createdBy) {
+      const u = await db.collection("users").doc(after.createdBy).get();
+      inviterName = (u.exists && u.get("name")) || inviterName;
+    }
+    await sendInviteEmails(newEmails, after.name || "a group", inviterName);
+  }
 
   const was = new Set(before.invited || []);
   const fresh = (after.invited || []).filter((u) => !was.has(u));

@@ -906,6 +906,13 @@ class _NotMemberBar extends StatelessWidget {
               label: const Text('Rejoin group'),
             ),
           ],
+          if (chat != null && chat.isGroup)
+            TextButton.icon(
+              onPressed: () => ChatActions.deleteChat(context, chat.id, me),
+              style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Delete group'),
+            ),
         ],
       ),
     );
