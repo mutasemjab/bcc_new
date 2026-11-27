@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'dart:io';
@@ -33,6 +34,7 @@ import '../../../appointments/appointments.dart';
 import '../chat_export.dart';
 import '../conversation_args.dart';
 import '../starred.dart';
+import 'photo_preview_page.dart';
 import '../widgets/composer.dart';
 import '../widgets/join_identity_sheet.dart';
 import '../widgets/conversation_banners.dart';
@@ -132,7 +134,7 @@ class _ConversationViewState extends State<_ConversationView> {
     }
     if (!mounted) return;
     if (!_bloc.state.messages.any((m) => m.id == messageId)) {
-      AppFeedback.info(context, 'That message is no longer available');
+      AppFeedback.info(context, tr('That message is no longer available'));
       return;
     }
     // 2) Scroll until its bubble is built, then centre it.
@@ -184,7 +186,7 @@ class _ConversationViewState extends State<_ConversationView> {
         return false;
       },
       (_) {
-        AppFeedback.info(context, 'Message scheduled');
+        AppFeedback.info(context, tr('Message scheduled'));
         return true;
       },
     );
@@ -198,12 +200,9 @@ class _ConversationViewState extends State<_ConversationView> {
       switch (kind) {
         case AttachmentKind.viewOncePhoto:
           final f = await picker.pickImage();
-          if (f != null) _bloc.add(MediaMessageSent(type: MessageType.image, file: f, viewOnce: true));
+          if (f != null) await _previewAndSend([f], viewOnce: true);
         case AttachmentKind.gallery:
-          final files = await picker.pickMultiImages();
-          for (final f in files) {
-            _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
-          }
+          await _previewAndSend(await picker.pickMultiImages());
         case AttachmentKind.camera:
           await _onCamera();
         case AttachmentKind.video:
@@ -224,7 +223,19 @@ class _ConversationViewState extends State<_ConversationView> {
           if (poll != null) _bloc.add(PollSent(poll));
       }
     } catch (e) {
-      if (mounted) AppFeedback.error(context, e is String ? e : 'Could not attach that file.');
+      if (mounted) AppFeedback.error(context, e is String ? e : tr('Could not attach that file.'));
+    }
+  }
+
+  /// Preview → (draw / text / rotate / caption / view once) → send.
+  Future<void> _previewAndSend(List<File> files, {bool viewOnce = false}) async {
+    if (files.isEmpty || !mounted) return;
+    final res = await openPhotoPreview(context, files, viewOnce: viewOnce);
+    if (res == null || !mounted) return;
+    for (final (i, f) in res.files.indexed) {
+      _bloc.add(
+        MediaMessageSent(type: MessageType.image, file: f, caption: i == 0 ? res.caption : '', viewOnce: res.viewOnce),
+      );
     }
   }
 
@@ -239,18 +250,18 @@ class _ConversationViewState extends State<_ConversationView> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.photo_camera_rounded, color: AppColors.primary),
-                  title: const Text('Take photo'),
+                  title: Text(tr('Take photo')),
                   onTap: () => Navigator.pop(ctx, 'photo'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.document_scanner_rounded, color: AppColors.primary),
-                  title: const Text('Scan document'),
-                  subtitle: const Text('Sent as a PDF'),
+                  title: Text(tr('Scan document')),
+                  subtitle: Text(tr('Sent as a PDF')),
                   onTap: () => Navigator.pop(ctx, 'scan'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library_rounded, color: AppColors.primary),
-                  title: const Text('Choose from gallery'),
+                  title: Text(tr('Choose from gallery')),
                   onTap: () => Navigator.pop(ctx, 'gallery'),
                 ),
               ],
@@ -263,11 +274,9 @@ class _ConversationViewState extends State<_ConversationView> {
       switch (choice) {
         case 'photo':
           final f = await picker.pickImage(camera: true);
-          if (f != null) _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
+          if (f != null) await _previewAndSend([f]);
         case 'gallery':
-          for (final f in await picker.pickMultiImages()) {
-            _bloc.add(MediaMessageSent(type: MessageType.image, file: f));
-          }
+          await _previewAndSend(await picker.pickMultiImages());
         case 'scan':
           final result = await CunningDocumentScanner.scanDocuments(
             noOfPages: 30,
@@ -277,13 +286,13 @@ class _ConversationViewState extends State<_ConversationView> {
           final pdf = result?.pdf;
           if (pdf == null) return;
           final file = File(pdf);
-          final name = 'Scan ${DateFormat('yyyy-MM-dd HH.mm').format(DateTime.now())}.pdf';
+          final name = tr('Scan {0}.pdf', [DateFormat('yyyy-MM-dd HH.mm').format(DateTime.now())]);
           _bloc.add(
             MediaMessageSent(type: MessageType.file, file: file, fileName: name, fileSize: await file.length()),
           );
       }
     } catch (e) {
-      if (mounted) AppFeedback.error(context, 'Could not open the camera or scanner.');
+      if (mounted) AppFeedback.error(context, tr('Could not open the camera or scanner.'));
     }
   }
 
@@ -327,13 +336,13 @@ class _ConversationViewState extends State<_ConversationView> {
         await showAppointmentEditor(context, initialTitle: m.text, chatId: state.chatId);
       case MessageAction.copy:
         await Clipboard.setData(ClipboardData(text: m.text));
-        if (mounted) AppFeedback.info(context, 'Copied to clipboard');
+        if (mounted) AppFeedback.info(context, tr('Copied to clipboard'));
       case MessageAction.edit:
         _bloc.add(EditTargetChanged(m));
       case MessageAction.pin:
         final r = await sl<ChatTools>().pin(state.chatId, m, myId);
         if (mounted)
-          r.match((f) => AppFeedback.error(context, f.message), (_) => AppFeedback.info(context, 'Message pinned'));
+          r.match((f) => AppFeedback.error(context, f.message), (_) => AppFeedback.info(context, tr('Message pinned')));
       case MessageAction.unpin:
         await sl<ChatTools>().unpin(state.chatId, m.id);
       case MessageAction.deleteForMe:
@@ -341,9 +350,9 @@ class _ConversationViewState extends State<_ConversationView> {
       case MessageAction.deleteForEveryone:
         final ok = await AppFeedback.confirm(
           context,
-          title: 'Delete for everyone?',
-          message: 'This message will be removed for all participants.',
-          confirmLabel: 'Delete',
+          title: tr('Delete for everyone?'),
+          message: tr('This message will be removed for all participants.'),
+          confirmLabel: tr('Delete'),
           destructive: true,
         );
         if (ok) _bloc.add(MessageDeleted(m, forEveryone: true));
@@ -369,7 +378,7 @@ class _ConversationViewState extends State<_ConversationView> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Text('Message info', style: ctx.text.titleLarge),
+                  child: Text(tr('Message info'), style: ctx.text.titleLarge),
                 ),
                 for (final uid in others)
                   ListTile(
@@ -383,6 +392,7 @@ class _ConversationViewState extends State<_ConversationView> {
                               ? DeliveryStatus.delivered
                               : DeliveryStatus.sent,
                       color: ctx.palette.textSecondary,
+                      readColor: AppColors.primary,
                     ),
                   ),
                 const SizedBox(height: 12),
@@ -525,7 +535,7 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
     if (peer == null || me == null) return '';
     if (sl<BlockList>().isBlocked(peer.id)) return '';
     // If I hide my online / last seen, I can't see other people's either.
-    if (peer.isOnline && !me.hideOnline) return 'online';
+    if (peer.isOnline && !me.hideOnline) return tr('online');
     if (me.hideLastSeen || peer.lastSeen == null) return '';
     return Formatters.lastSeen(peer.lastSeen);
   }
@@ -573,7 +583,7 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
                           typing.isNotEmpty
                               ? TypingLabel(
                                 key: const ValueKey('typing'),
-                                text: state.isGroup ? '${typing.join(', ')} typing' : 'typing',
+                                text: state.isGroup ? tr('{0} typing', [typing.join(', ')]) : tr('typing'),
                                 color: AppColors.accent,
                                 fontSize: 12.5,
                               )
@@ -586,7 +596,7 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12.5,
-                                  color: subtitle == 'online' ? AppColors.online : context.palette.textSecondary,
+                                  color: subtitle == tr('online') ? AppColors.online : context.palette.textSecondary,
                                 ),
                               ),
                     ),
@@ -600,13 +610,13 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
       actions: [
         if (state.isMember && state.chat != null) ...[
           IconButton(
-            tooltip: 'Video call',
+            tooltip: tr('Video call'),
             onPressed:
                 () => CallLauncher.start(context, chat: state.chat!, users: state.displayUsers, type: CallType.video),
             icon: const Icon(Icons.videocam_rounded),
           ),
           IconButton(
-            tooltip: 'Voice call',
+            tooltip: tr('Voice call'),
             onPressed:
                 () => CallLauncher.start(context, chat: state.chat!, users: state.displayUsers, type: CallType.voice),
             icon: const Icon(Icons.call_rounded),
@@ -620,7 +630,7 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
               case 'media':
                 context.push(AppRoutes.chatMedia(state.chatId));
               case 'wallpaper':
-                context.push('${AppRoutes.wallpaper}?chatId=${state.chatId}');
+                context.push(tr('{0}?chatId={1}', [AppRoutes.wallpaper, state.chatId]));
               case 'scheduled':
                 showScheduledMessagesSheet(context, uid: state.me!.id, chatId: state.chatId);
               case 'mute':
@@ -645,23 +655,28 @@ class _ConversationAppBar extends StatelessWidget implements PreferredSizeWidget
             final muted = state.chat?.isMutedFor(state.me!.id) ?? false;
             final blocked = sl<BlockList>().isBlocked(state.peer?.id);
             return [
-              PopupMenuItem(value: 'info', child: Text(state.isGroup ? 'Group info' : 'View contact')),
-              const PopupMenuItem(value: 'media', child: Text('Media, links and docs')),
-              const PopupMenuItem(value: 'scheduled', child: Text('Scheduled messages')),
+              PopupMenuItem(value: 'info', child: Text(state.isGroup ? tr('Group info') : tr('View contact'))),
+              PopupMenuItem(value: 'media', child: Text(tr('Media, links and docs'))),
+              PopupMenuItem(value: 'scheduled', child: Text(tr('Scheduled messages'))),
               if (state.chat != null)
-                PopupMenuItem(value: 'mute', child: Text(muted ? 'Unmute notifications' : 'Mute notifications')),
-              const PopupMenuItem(value: 'wallpaper', child: Text('Wallpaper')),
-              const PopupMenuItem(value: 'starred', child: Text('Starred messages')),
-              const PopupMenuItem(value: 'clear', child: Text('Clear chat')),
+                PopupMenuItem(
+                  value: 'mute',
+                  child: Text(muted ? tr('Unmute notifications') : tr('Mute notifications')),
+                ),
+              PopupMenuItem(value: 'wallpaper', child: Text(tr('Wallpaper'))),
+              PopupMenuItem(value: 'starred', child: Text(tr('Starred messages'))),
+              PopupMenuItem(value: 'clear', child: Text(tr('Clear chat'))),
               if (state.chat != null)
                 PopupMenuItem(
                   value: 'autoclear',
-                  child: Text((state.chat!.autoClearsFor(state.me!.id)) ? 'Daily auto-clear: on' : 'Clear chat daily'),
+                  child: Text(
+                    (state.chat!.autoClearsFor(state.me!.id)) ? tr('Daily auto-clear: on') : tr('Clear chat daily'),
+                  ),
                 ),
-              const PopupMenuItem(value: 'export', child: Text('Export chat')),
-              if (!state.isGroup) const PopupMenuItem(value: 'delete', child: Text('Delete chat')),
+              PopupMenuItem(value: 'export', child: Text(tr('Export chat'))),
+              if (!state.isGroup) PopupMenuItem(value: 'delete', child: Text(tr('Delete chat'))),
               if (!state.isGroup && state.peer != null)
-                PopupMenuItem(value: 'block', child: Text(blocked ? 'Unblock' : 'Block')),
+                PopupMenuItem(value: 'block', child: Text(blocked ? tr('Unblock') : tr('Block'))),
             ];
           },
         ),
@@ -724,9 +739,9 @@ class _MessageList extends StatelessWidget {
             children: [
               const Text('👋', style: TextStyle(fontSize: 44)),
               const SizedBox(height: 10),
-              Text('Say hello!', style: context.text.titleMedium),
+              Text(tr('Say hello!'), style: context.text.titleMedium),
               const SizedBox(height: 4),
-              Text('Messages are delivered in real time.', style: TextStyle(color: context.palette.textSecondary)),
+              Text(tr('Messages are delivered in real time.'), style: TextStyle(color: context.palette.textSecondary)),
             ],
           ),
         ),
@@ -804,7 +819,7 @@ class _MessageList extends StatelessWidget {
                   ListTile(
                     leading: AppAvatar(name: state.nameOf(e.key), imageUrl: state.photoOf(e.key), size: 40),
                     title: Text(state.nameOf(e.key)),
-                    subtitle: e.key == state.me!.id ? const Text('Tap to remove') : null,
+                    subtitle: e.key == state.me!.id ? Text(tr('Tap to remove')) : null,
                     trailing: Text(e.value, style: const TextStyle(fontSize: 24)),
                     onTap:
                         e.key == state.me!.id
@@ -838,11 +853,11 @@ class _BlockedBar extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + MediaQuery.paddingOf(context).bottom),
         child: Text.rich(
           TextSpan(
-            text: 'You blocked $name. ',
+            text: tr('You blocked {0}. ', [name]),
             style: TextStyle(color: context.palette.textSecondary),
-            children: const [
+            children: [
               TextSpan(
-                text: 'Tap to unblock.',
+                text: tr('Tap to unblock.'),
                 style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
               ),
             ],
@@ -865,14 +880,14 @@ class _NotMemberBar extends StatelessWidget {
     final chat = state.chat!;
     final choice = await chooseJoinIdentity(
       context,
-      groupName: chat.name ?? 'Group',
+      groupName: chat.name ?? tr('Group'),
       myName: me.name,
       myPhotoUrl: me.photoUrl,
     );
     if (choice == null || !context.mounted) return;
     final r = await sl<GroupMembership>().rejoin(chat.id, me.id, me.name, alias: choice.alias);
     if (context.mounted)
-      r.match((f) => AppFeedback.error(context, f.message), (_) => AppFeedback.info(context, 'Welcome back'));
+      r.match((f) => AppFeedback.error(context, f.message), (_) => AppFeedback.info(context, tr('Welcome back')));
   }
 
   @override
@@ -881,14 +896,14 @@ class _NotMemberBar extends StatelessWidget {
     final me = state.me?.id ?? '';
     final String text;
     if (chat?.closed ?? false) {
-      text = 'This group has ended. No one can send messages anymore.';
+      text = tr('This group has ended. No one can send messages anymore.');
     } else if (chat?.isFormerMember(me) ?? false) {
       text =
           chat!.secret
-              ? 'You left this secret group. An admin has to invite you to come back.'
-              : 'You left this group.';
+              ? tr('You left this secret group. An admin has to invite you to come back.')
+              : tr('You left this group.');
     } else {
-      text = "You can't send messages to this group because you're no longer a member.";
+      text = tr('You can\'t send messages to this group because you\'re no longer a member.');
     }
     return Container(
       width: double.infinity,
@@ -903,7 +918,7 @@ class _NotMemberBar extends StatelessWidget {
             FilledButton.icon(
               onPressed: () => _rejoin(context),
               icon: const Icon(Icons.group_add_rounded),
-              label: const Text('Rejoin group'),
+              label: Text(tr('Rejoin group')),
             ),
           ],
           if (chat != null && chat.isGroup)
@@ -911,7 +926,7 @@ class _NotMemberBar extends StatelessWidget {
               onPressed: () => ChatActions.deleteChat(context, chat.id, me),
               style: TextButton.styleFrom(foregroundColor: AppColors.danger),
               icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Delete group'),
+              label: Text(tr('Delete group')),
             ),
         ],
       ),

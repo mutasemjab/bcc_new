@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,18 +8,19 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/message_entity.dart';
 
-/// Opens a view-once photo or voice note. [onOpened] is called immediately
-/// (like WhatsApp, opening counts even if it is closed right away).
+/// Opens a view-once photo or voice note. [onOpened] is called when the
+/// viewer closes (marking it earlier could delete the file before it loads).
 Future<void> openViewOnce(BuildContext context, MessageEntity m, {required VoidCallback onOpened}) async {
   final url = m.mediaUrl;
   if (url == null) return;
-  onOpened();
   if (m.type == MessageType.audio) {
     await showModalBottomSheet<void>(context: context, isDismissible: true, builder: (_) => _ViewOnceAudio(url: url));
+    onOpened();
   } else {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => _ViewOncePhoto(url: url, caption: m.text)));
+    onOpened();
   }
 }
 
@@ -34,12 +36,12 @@ class _ViewOncePhoto extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _OneBadge(),
             SizedBox(width: 8),
-            Text('View once', style: TextStyle(color: Colors.white, fontSize: 16)),
+            Text(tr('View once'), style: TextStyle(color: Colors.white, fontSize: 16)),
           ],
         ),
       ),
@@ -57,7 +59,7 @@ class _ViewOncePhoto extends StatelessWidget {
                           progress == null ? child : const CircularProgressIndicator(color: Colors.white),
                   errorBuilder:
                       (_, __, ___) =>
-                          const Text('This photo is no longer available', style: TextStyle(color: Colors.white70)),
+                          Text(tr('This photo is no longer available'), style: TextStyle(color: Colors.white70)),
                 ),
               ),
             ),
@@ -104,7 +106,7 @@ class _ViewOnceAudioState extends State<_ViewOnceAudio> {
         }),
       );
     _player.setUrl(widget.url).then((_) => _player.play()).catchError((Object _) {
-      if (mounted) setState(() => _error = 'This voice message is no longer available');
+      if (mounted) setState(() => _error = tr('This voice message is no longer available'));
       return null;
     });
   }
@@ -127,11 +129,11 @@ class _ViewOnceAudioState extends State<_ViewOnceAudio> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Row(
+            Row(
               children: [
                 _OneBadge(color: AppColors.primary),
                 SizedBox(width: 8),
-                Text('View once voice message', style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(tr('View once voice message'), style: TextStyle(fontWeight: FontWeight.w700)),
               ],
             ),
             const SizedBox(height: 16),
@@ -163,7 +165,7 @@ class _ViewOnceAudioState extends State<_ViewOnceAudio> {
               ),
             const SizedBox(height: 6),
             Text(
-              'This voice message disappears once you close it.',
+              tr('This voice message disappears once you close it.'),
               style: TextStyle(color: context.palette.textSecondary, fontSize: 12.5),
             ),
           ],

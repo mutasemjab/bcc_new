@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
@@ -21,7 +22,7 @@ class AgoraRtcService implements RtcService {
   @override
   Future<void> initialize({required bool video}) async {
     if (Env.agoraAppId.isEmpty) {
-      throw StateError('AGORA_APP_ID is missing. Run with --dart-define=AGORA_APP_ID=<your id>.');
+      throw StateError(tr('AGORA_APP_ID is missing. Run with --dart-define=AGORA_APP_ID=<your id>.'));
     }
     final engine = createAgoraRtcEngine();
     await engine.initialize(
@@ -45,7 +46,7 @@ class AgoraRtcService implements RtcService {
         },
         onError: (err, msg) {
           if (err == ErrorCodeType.errTokenExpired || err == ErrorCodeType.errInvalidToken) {
-            _events.add(RtcFailure('Call authorisation failed ($msg).'));
+            _events.add(RtcFailure(tr('Call authorisation failed ({0}).', [msg])));
           }
         },
       ),

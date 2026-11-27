@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -101,7 +102,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'BCC Chat ${call.isVideo ? 'video' : 'voice'} call',
+                          tr('BCC Chat {0} call', [call.isVideo ? 'video' : 'voice']),
                           style: const TextStyle(color: Colors.white60, fontSize: 14),
                         ),
                       ],
@@ -116,7 +117,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      call.isGroup ? '${call.callerName} is inviting you…' : 'Incoming call…',
+                      call.isGroup ? tr('{0} is inviting you…', [call.callerName]) : tr('Incoming call…'),
                       style: const TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                     const Spacer(flex: 2),
@@ -129,7 +130,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
                             icon: Icons.call_end_rounded,
                             danger: true,
                             size: 74,
-                            label: 'Decline',
+                            label: tr('Decline'),
                             onTap: _decline,
                           ),
                           _AcceptButton(isVideo: call.isVideo, busy: _busy, onTap: _accept),
@@ -206,7 +207,7 @@ class _AcceptButtonState extends State<_AcceptButton> with SingleTickerProviderS
           ),
         ),
         const SizedBox(height: 8),
-        const Text('Accept', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(tr('Accept'), style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }

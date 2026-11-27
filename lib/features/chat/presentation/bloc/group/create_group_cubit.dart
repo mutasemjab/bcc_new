@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
@@ -75,7 +76,7 @@ class CreateGroupCubit extends Cubit<CreateGroupState> {
 
   void next() {
     if (state.selected.isEmpty && state.emails.isEmpty) {
-      emit(state.copyWith(error: 'Select at least one member or add an email.'));
+      emit(state.copyWith(error: tr('Select at least one member or add an email.')));
       return;
     }
     emit(state.copyWith(step: CreateGroupStep.details));

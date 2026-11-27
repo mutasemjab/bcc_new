@@ -70,13 +70,13 @@ class ConversationState extends Equatable {
     return id == null ? null : users[id];
   }
 
-  String get title => isGroup ? (chat?.name ?? 'Group') : (peer?.name ?? '');
+  String get title => isGroup ? (chat?.name ?? tr('Group')) : (peer?.name ?? '');
   String? get photoUrl => isGroup ? chat?.photoUrl : peer?.photoUrl;
 
   /// Display name, respecting anonymous group members.
   String nameOf(String uid) {
-    if (uid == me?.id) return 'You';
-    return chat?.aliasOf(uid) ?? users[uid]?.name ?? 'Unknown';
+    if (uid == me?.id) return tr('You');
+    return chat?.aliasOf(uid) ?? users[uid]?.name ?? tr('Unknown');
   }
 
   /// Profile photo, hidden for anonymous group members.

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -58,12 +59,12 @@ class _ProfileViewState extends State<_ProfileView> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.photo_camera_rounded),
-                  title: const Text('Take photo'),
+                  title: Text(tr('Take photo')),
                   onTap: () => Navigator.pop(ctx, true),
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library_rounded),
-                  title: const Text('Choose from gallery'),
+                  title: Text(tr('Choose from gallery')),
                   onTap: () => Navigator.pop(ctx, false),
                 ),
               ],
@@ -84,9 +85,9 @@ class _ProfileViewState extends State<_ProfileView> {
           _name.text = state.user!.name;
           _about.text = state.user!.about;
         }
-        if (state.status == ProfileStatus.failure) AppFeedback.error(context, state.message ?? 'Error');
+        if (state.status == ProfileStatus.failure) AppFeedback.error(context, state.message ?? tr('Error'));
         if (state.status == ProfileStatus.saved && widget.isEditing) {
-          AppFeedback.success(context, 'Profile updated');
+          AppFeedback.success(context, tr('Profile updated'));
           context.pop();
         }
         // First-run: SessionBloc sees the new profile and the router moves on.
@@ -94,12 +95,12 @@ class _ProfileViewState extends State<_ProfileView> {
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
-            title: Text(widget.isEditing ? 'Edit profile' : ''),
+            title: Text(widget.isEditing ? tr('Edit profile') : ''),
             actions: [
               if (!widget.isEditing)
                 TextButton(
                   onPressed: () => context.read<SessionBloc>().add(const SessionSignOutRequested()),
-                  child: const Text('Sign out'),
+                  child: Text(tr('Sign out')),
                 ),
             ],
           ),
@@ -108,10 +109,13 @@ class _ProfileViewState extends State<_ProfileView> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               children: [
                 if (!widget.isEditing) ...[
-                  Text('Set up your\nprofile', style: context.text.displaySmall?.copyWith(fontSize: 34, height: 1.1)),
+                  Text(
+                    tr('Set up your\nprofile'),
+                    style: context.text.displaySmall?.copyWith(fontSize: 34, height: 1.1),
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    'Add a name and photo so friends recognise you.',
+                    tr('Add a name and photo so friends recognise you.'),
                     style: context.text.bodyLarge?.copyWith(color: context.palette.textSecondary),
                   ),
                 ],
@@ -122,8 +126,8 @@ class _ProfileViewState extends State<_ProfileView> {
                   controller: _name,
                   textCapitalization: TextCapitalization.words,
                   maxLength: 40,
-                  decoration: const InputDecoration(
-                    hintText: 'Your name',
+                  decoration: InputDecoration(
+                    hintText: tr('Your name'),
                     prefixIcon: Icon(Icons.person_outline_rounded),
                     counterText: '',
                   ),
@@ -134,14 +138,14 @@ class _ProfileViewState extends State<_ProfileView> {
                   maxLength: 140,
                   maxLines: 3,
                   minLines: 1,
-                  decoration: const InputDecoration(
-                    hintText: 'About (optional)',
+                  decoration: InputDecoration(
+                    hintText: tr('About (optional)'),
                     prefixIcon: Icon(Icons.info_outline_rounded),
                   ),
                 ),
                 const SizedBox(height: 28),
                 GradientButton(
-                  label: widget.isEditing ? 'Save changes' : 'Get started',
+                  label: widget.isEditing ? tr('Save changes') : tr('Get started'),
                   isLoading: state.status == ProfileStatus.saving,
                   onPressed:
                       () => context.read<ProfileBloc>().add(ProfileSubmitted(name: _name.text, about: _about.text)),

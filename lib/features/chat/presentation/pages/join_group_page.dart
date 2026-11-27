@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -68,8 +69,8 @@ class _JoinGroupPageState extends State<JoinGroupPage> {
     final r = await sl<GroupMembership>().joinWithLink(widget.chatId, widget.code, me.id, me.name, alias: alias);
     if (!mounted) return;
     setState(() => _joining = false);
-    r.match((f) => AppFeedback.error(context, 'Could not join. The link may have been reset.'), (_) {
-      if (alias != null) AppFeedback.info(context, 'You joined as $alias');
+    r.match((f) => AppFeedback.error(context, tr('Could not join. The link may have been reset.')), (_) {
+      if (alias != null) AppFeedback.info(context, tr('You joined as {0}', [alias]));
       context.pushReplacement(AppRoutes.conversation(widget.chatId));
     });
   }
@@ -78,15 +79,15 @@ class _JoinGroupPageState extends State<JoinGroupPage> {
   Widget build(BuildContext context) {
     final p = _preview;
     return Scaffold(
-      appBar: AppBar(title: const Text('Group invite')),
+      appBar: AppBar(title: Text(tr('Group invite'))),
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
               : p == null
-              ? const EmptyState(
+              ? EmptyState(
                 icon: Icons.link_off_rounded,
-                title: 'Link not valid',
-                message: 'This invite link was reset or turned off by a group admin.',
+                title: tr('Link not valid'),
+                message: tr('This invite link was reset or turned off by a group admin.'),
               )
               : Padding(
                 padding: const EdgeInsets.all(24),
@@ -107,13 +108,13 @@ class _JoinGroupPageState extends State<JoinGroupPage> {
                     const SizedBox(height: 10),
                     Text(
                       _alreadyMember
-                          ? "You're already a member of this group."
-                          : "You've been invited to join this group.",
+                          ? tr('You\'re already a member of this group.')
+                          : tr('You\'ve been invited to join this group.'),
                       style: TextStyle(color: context.palette.textSecondary),
                     ),
                     const Spacer(),
                     GradientButton(
-                      label: _alreadyMember ? 'Open group' : 'Join group',
+                      label: _alreadyMember ? tr('Open group') : tr('Join group'),
                       icon: _alreadyMember ? Icons.forum_rounded : Icons.group_add_rounded,
                       isLoading: _joining,
                       onPressed:

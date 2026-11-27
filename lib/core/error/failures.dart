@@ -1,13 +1,17 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:equatable/equatable.dart';
 
 /// A domain-level error. Repositories translate exceptions into failures so
 /// the presentation layer never sees Firebase/platform types.
 sealed class Failure extends Equatable {
-  const Failure(this.message);
-  final String message;
+  const Failure(this._message);
+  final String _message;
+
+  /// Shown to the user in the app's language.
+  String get message => tr(_message);
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [_message];
 }
 
 class ServerFailure extends Failure {

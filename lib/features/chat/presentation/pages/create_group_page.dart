@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -49,17 +50,18 @@ class CreateGroupPage extends StatelessWidget {
             () async {
               final send = await AppFeedback.confirm(
                 context,
-                title: 'Email the invitations?',
-                message:
-                    'Send an invitation email to the ${state.emails.length} people you added, from your email app. '
-                    'It explains how to download the app and join.',
-                confirmLabel: 'Send email',
+                title: tr('Email the invitations?'),
+                message: tr(
+                  'Send an invitation email to the {0} people you added, from your email app. It explains how to download the app and join.',
+                  [state.emails.length],
+                ),
+                confirmLabel: tr('Send email'),
               );
               if (send && context.mounted) {
                 await sendInvitationEmails(
                   context,
                   emails: state.emails,
-                  groupName: context.read<CreateGroupCubit>().createdName ?? 'the group',
+                  groupName: context.read<CreateGroupCubit>().createdName ?? tr('the group'),
                   inviterName: session.user.name,
                   chatId: chatId,
                 );
@@ -140,7 +142,7 @@ class MemberPicker extends StatelessWidget {
                   child: TextField(
                     onChanged: context.read<UserSearchCubit>().queryChanged,
                     decoration: InputDecoration(
-                      hintText: 'Search name, email or phone',
+                      hintText: tr('Search name, email or phone'),
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon:
                           search.isLoading
@@ -158,8 +160,8 @@ class MemberPicker extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.person_add_alt_1_rounded, color: AppColors.primary),
-                  title: const Text('Invite friends to BCC Chat'),
-                  subtitle: const Text("For contacts who don't have the app yet"),
+                  title: Text(tr('Invite friends to BCC Chat')),
+                  subtitle: Text(tr('For contacts who don\'t have the app yet')),
                   onTap: () {
                     final session = context.read<SessionBloc>().state;
                     Navigator.of(context).push(
@@ -177,11 +179,11 @@ class MemberPicker extends StatelessWidget {
                       list.isEmpty
                           ? EmptyState(
                             icon: Icons.group_rounded,
-                            title: searching ? 'No one found' : 'No contacts yet',
+                            title: searching ? tr('No one found') : tr('No contacts yet'),
                             message:
                                 searching
-                                    ? 'Try another name, email or phone number.'
-                                    : 'Your contacts on BCC Chat appear here. Search to find more people.',
+                                    ? tr('Try another name, email or phone number.')
+                                    : tr('Your contacts on BCC Chat appear here. Search to find more people.'),
                           )
                           : ListView.builder(
                             itemCount: list.length,
@@ -230,11 +232,11 @@ class _MembersStep extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('New group'),
+            Text(tr('New group')),
             Text(
               state.selected.isEmpty && state.emails.isEmpty
-                  ? 'Invite members'
-                  : '${state.selected.length + state.emails.length} will be invited',
+                  ? tr('Invite members')
+                  : tr('{0} will be invited', [state.selected.length + state.emails.length]),
               style: context.text.bodySmall,
             ),
           ],
@@ -254,11 +256,11 @@ class _MembersStep extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.alternate_email_rounded, color: AppColors.primary),
-            title: const Text('Invite by email'),
+            title: Text(tr('Invite by email')),
             subtitle: Text(
               state.emails.isEmpty
-                  ? "Also for people who don't have the app yet"
-                  : '${state.emails.length} email${state.emails.length == 1 ? '' : 's'} added',
+                  ? tr('Also for people who don\'t have the app yet')
+                  : tr('{0} email{1} added', [state.emails.length, state.emails.length == 1 ? '' : 's']),
             ),
             onTap: () async {
               final emails = await showEmailInviteSheet(context);
@@ -363,7 +365,7 @@ class _DetailsStepState extends State<_DetailsStep> {
     final cubit = context.read<CreateGroupCubit>();
     final state = context.watch<CreateGroupCubit>().state;
     return Scaffold(
-      appBar: AppBar(leading: BackButton(onPressed: cubit.back), title: const Text('Group details')),
+      appBar: AppBar(leading: BackButton(onPressed: cubit.back), title: Text(tr('Group details'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -393,7 +395,7 @@ class _DetailsStepState extends State<_DetailsStep> {
             autofocus: true,
             maxLength: 60,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Group name', prefixIcon: Icon(Icons.groups_rounded)),
+            decoration: InputDecoration(hintText: tr('Group name'), prefixIcon: Icon(Icons.groups_rounded)),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -401,13 +403,10 @@ class _DetailsStepState extends State<_DetailsStep> {
             maxLength: 300,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(
-              hintText: 'Description (optional)',
-              prefixIcon: Icon(Icons.notes_rounded),
-            ),
+            decoration: InputDecoration(hintText: tr('Description (optional)'), prefixIcon: Icon(Icons.notes_rounded)),
           ),
           const SizedBox(height: 16),
-          Text('${state.selected.length} invitations will be sent', style: context.text.labelSmall),
+          Text(tr('{0} invitations will be sent', [state.selected.length]), style: context.text.labelSmall),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -424,7 +423,7 @@ class _DetailsStepState extends State<_DetailsStep> {
           ),
           const SizedBox(height: 32),
           GradientButton(
-            label: 'Create group',
+            label: tr('Create group'),
             icon: Icons.check_rounded,
             isLoading: state.status == CreateGroupStatus.creating,
             onPressed: () => cubit.create(name: _name.text, description: _description.text.trim()),

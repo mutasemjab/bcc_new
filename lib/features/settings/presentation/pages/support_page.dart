@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,14 +15,14 @@ class SupportPage extends StatelessWidget {
   Future<void> _open(BuildContext context, Uri uri, String copyText) async {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       await Clipboard.setData(ClipboardData(text: copyText));
-      if (context.mounted) AppFeedback.info(context, 'Copied: $copyText');
+      if (context.mounted) AppFeedback.info(context, tr('Copied: {0}', [copyText]));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & support')),
+      appBar: AppBar(title: Text(tr('Help & support'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -33,13 +34,13 @@ class SupportPage extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.phone_rounded, color: AppColors.primary),
-                title: const Text('Technical support (phone)'),
+                title: Text(tr('Technical support (phone)')),
                 subtitle: Text(Env.supportPhone),
                 onTap: () => _open(context, Uri(scheme: 'tel', path: Env.supportPhone), Env.supportPhone),
               ),
               ListTile(
                 leading: const Icon(Icons.chat_rounded, color: AppColors.online),
-                title: const Text('WhatsApp support'),
+                title: Text(tr('WhatsApp support')),
                 subtitle: Text(Env.supportPhone),
                 onTap:
                     () => _open(
@@ -50,7 +51,7 @@ class SupportPage extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.email_rounded, color: AppColors.primary),
-                title: const Text('Technical support (email)'),
+                title: Text(tr('Technical support (email)')),
                 subtitle: Text(Env.supportEmail),
                 onTap:
                     () => _open(
@@ -66,7 +67,7 @@ class SupportPage extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.location_on_rounded, color: AppColors.primary),
-                title: const Text('Head office'),
+                title: Text(tr('Head office')),
                 subtitle: Text(Env.companyAddress),
                 onTap:
                     () => _open(

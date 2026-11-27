@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -206,7 +207,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     return ReplyInfo(
       messageId: r.id,
       senderId: r.senderId,
-      senderName: r.isMine(_me) ? 'You' : state.nameOf(r.senderId),
+      senderName: r.isMine(_me) ? tr('You') : state.nameOf(r.senderId),
       type: r.type,
       preview: r.preview,
     );

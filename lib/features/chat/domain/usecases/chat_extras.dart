@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/error/failures.dart';
@@ -35,7 +36,7 @@ class GroupMembership {
     String actorId,
     String actorName,
   ) {
-    if (emails.length > 256) return Future.value(const Left(ValidationFailure('Up to 256 emails at a time.')));
+    if (emails.length > 256) return Future.value(Left(ValidationFailure(tr('Up to 256 emails at a time.'))));
     return _repo.inviteByEmail(chatId, emails, actorId, actorName);
   }
 
@@ -52,7 +53,7 @@ class GroupMembership {
   ResultFuture<void> hide(ChatEntity chat, String uid, String name, String alias) {
     final until = chat.canHideAgainAt(uid);
     if (until != null) {
-      return Future.value(Left(ValidationFailure('You can hide your identity again ${formatUntil(until)}.')));
+      return Future.value(Left(ValidationFailure(tr('You can hide your identity again {0}.', [formatUntil(until)]))));
     }
     return _repo.hideIdentity(chat.id, uid, name, alias);
   }
@@ -75,7 +76,7 @@ class GroupMembership {
     final h = t.hour.toString().padLeft(2, '0'), m = t.minute.toString().padLeft(2, '0');
     final now = DateTime.now();
     final sameDay = t.year == now.year && t.month == now.month && t.day == now.day;
-    return 'at $h:$m ${sameDay ? 'today' : 'tomorrow'}';
+    return tr('at {0}:{1} {2}', [h, m, sameDay ? 'today' : 'tomorrow']);
   }
 }
 
@@ -90,9 +91,9 @@ class ChatTools {
   Stream<List<ScheduledMessage>> scheduled(String uid) => _repo.watchScheduled(uid);
 
   ResultFuture<void> schedule(ScheduledMessage m) {
-    if (m.text.trim().isEmpty) return Future.value(const Left(ValidationFailure('Message is empty.')));
+    if (m.text.trim().isEmpty) return Future.value(Left(ValidationFailure(tr('Message is empty.'))));
     if (!m.sendAt.isAfter(DateTime.now())) {
-      return Future.value(const Left(ValidationFailure('Pick a time in the future.')));
+      return Future.value(Left(ValidationFailure(tr('Pick a time in the future.'))));
     }
     return _repo.scheduleMessage(m);
   }
@@ -117,12 +118,12 @@ class ChatTools {
     String senderId,
     List<({String chatId, List<String> participants, bool isGroup})> targets,
   ) async {
-    if (m.viewOnce) return const Left(ValidationFailure("View-once messages can't be forwarded."));
+    if (m.viewOnce) return Left(ValidationFailure(tr('View-once messages can\'t be forwarded.')));
     if (m.type == MessageType.poll || m.type == MessageType.system) {
-      return const Left(ValidationFailure("This message can't be forwarded."));
+      return Left(ValidationFailure(tr('This message can\'t be forwarded.')));
     }
     if (targets.length > maxForwardTargets) {
-      return const Left(ValidationFailure('You can forward to up to 5 chats at a time.'));
+      return Left(ValidationFailure(tr('You can forward to up to 5 chats at a time.')));
     }
     for (final t in targets) {
       final r = await _repo.sendMessage(

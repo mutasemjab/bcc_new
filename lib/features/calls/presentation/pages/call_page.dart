@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
@@ -39,10 +40,10 @@ class _CallView extends StatelessWidget {
   final CallRouteArgs args;
 
   String _status(CallSessionState s) => switch (s.phase) {
-    CallPhase.idle || CallPhase.connecting => 'Connecting…',
-    CallPhase.ringing => args.isGroup ? 'Waiting for others…' : 'Ringing…',
+    CallPhase.idle || CallPhase.connecting => tr('Connecting…'),
+    CallPhase.ringing => args.isGroup ? tr('Waiting for others…') : tr('Ringing…'),
     CallPhase.active => Formatters.duration(s.elapsed),
-    CallPhase.ended => s.endReason ?? 'Call ended',
+    CallPhase.ended => s.endReason ?? tr('Call ended'),
   };
 
   @override
@@ -176,7 +177,7 @@ class _VoiceStage extends StatelessWidget {
                 const Icon(Icons.lock_rounded, color: Colors.white54, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  args.isVideo ? 'Video call' : 'Voice call',
+                  args.isVideo ? tr('Video call') : tr('Voice call'),
                   style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               ],

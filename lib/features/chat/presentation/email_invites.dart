@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -70,7 +71,7 @@ class EmailInviteClaimer extends ChangeNotifier with WidgetsBindingObserver {
       await _auth.currentUser?.sendEmailVerification();
       return null;
     } catch (e) {
-      return 'Could not send the email. Try again in a minute.';
+      return tr('Could not send the email. Try again in a minute.');
     }
   }
 
@@ -102,16 +103,16 @@ class VerifyEmailBanner extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
                   Icon(Icons.mark_email_unread_rounded, color: AppColors.primary),
                   SizedBox(width: 10),
-                  Expanded(child: Text('Verify your email', style: TextStyle(fontWeight: FontWeight.w700))),
+                  Expanded(child: Text(tr('Verify your email'), style: TextStyle(fontWeight: FontWeight.w700))),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                'Confirm ${claimer.email ?? 'your email'} to receive group invitations sent to it.',
+                tr('Confirm {0} to receive group invitations sent to it.', [claimer.email ?? 'your email']),
                 style: TextStyle(color: context.palette.textSecondary, fontSize: 13),
               ),
               Row(
@@ -121,19 +122,19 @@ class VerifyEmailBanner extends StatelessWidget {
                     onPressed: () async {
                       final err = await claimer.sendVerification();
                       if (context.mounted) {
-                        AppFeedback.info(context, err ?? 'Verification link sent — check your inbox (and spam).');
+                        AppFeedback.info(context, err ?? tr('Verification link sent — check your inbox (and spam).'));
                       }
                     },
-                    child: const Text('Send link'),
+                    child: Text(tr('Send link')),
                   ),
                   FilledButton(
                     onPressed: () async {
                       final ok = await claimer.check();
                       if (context.mounted && !ok) {
-                        AppFeedback.info(context, 'Not verified yet — tap the link in the email first.');
+                        AppFeedback.info(context, tr('Not verified yet — tap the link in the email first.'));
                       }
                     },
-                    child: const Text("I've verified"),
+                    child: Text(tr('I\'ve verified')),
                   ),
                 ],
               ),
@@ -185,11 +186,12 @@ class _EmailInviteSheetState extends State<_EmailInviteSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Invite by email', style: context.text.titleLarge),
+          Text(tr('Invite by email'), style: context.text.titleLarge),
           const SizedBox(height: 6),
           Text(
-            "Add the emails of people you want in the group — even if they don't have the app yet. "
-            "When they sign up with the same email, the invitation will be waiting for them.",
+            tr(
+              'Add the emails of people you want in the group — even if they don\'t have the app yet. When they sign up with the same email, the invitation will be waiting for them.',
+            ),
             style: TextStyle(color: context.palette.textSecondary, height: 1.35),
           ),
           const SizedBox(height: 12),
@@ -199,7 +201,7 @@ class _EmailInviteSheetState extends State<_EmailInviteSheet> {
             minLines: 3,
             maxLines: 8,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(hintText: 'name@example.com, other@example.com…\n(paste a whole list)'),
+            decoration: InputDecoration(hintText: tr('name@example.com, other@example.com…\n(paste a whole list)')),
           ),
           const SizedBox(height: 8),
           if (_emails.isNotEmpty)
@@ -219,7 +221,7 @@ class _EmailInviteSheetState extends State<_EmailInviteSheet> {
             child: FilledButton.icon(
               onPressed: _emails.isEmpty ? null : () => Navigator.pop(context, _emails),
               icon: const Icon(Icons.group_add_rounded),
-              label: Text(_emails.isEmpty ? 'Add emails' : 'Invite ${_emails.length}'),
+              label: Text(_emails.isEmpty ? tr('Add emails') : tr('Invite {0}', [_emails.length])),
             ),
           ),
         ],
@@ -239,16 +241,19 @@ Future<void> sendInvitationEmails(
   String? inviteCode,
 }) async {
   final link = chatId != null && inviteCode != null ? GroupLinks.build(chatId, inviteCode) : null;
-  final subject = '$inviterName invited you to "$groupName" on ${Env.appName}';
+  final subject = tr('{0} invited you to "{1}" on {2}', [inviterName, groupName, Env.appName]);
   final body = [
     'Hi!',
     '',
-    '$inviterName invited you to join the group "$groupName" on ${Env.appName}.',
+    tr('{0} invited you to join the group "{1}" on {2}.', [inviterName, groupName, Env.appName]),
     '',
-    '1) Download the app: ${Env.downloadUrl}',
-    '2) Sign up with THIS email address and confirm it.',
-    '3) The group invitation will be waiting for you in the app.',
-    if (link != null) ...['', 'Or open this link after installing: $link'],
+    tr('1) Download the app: {0}', [Env.downloadUrl]),
+    tr('2) Sign up with THIS email address and confirm it.'),
+    tr('3) The group invitation will be waiting for you in the app.'),
+    if (link != null) ...[
+      '',
+      tr('Or open this link after installing: {0}', [link]),
+    ],
   ].join('\n');
   final uri = Uri(scheme: 'mailto', queryParameters: {'bcc': emails.join(','), 'subject': subject, 'body': body});
   // mailto needs %20 rather than '+' for spaces.

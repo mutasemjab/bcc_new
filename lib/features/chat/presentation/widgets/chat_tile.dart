@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -43,8 +44,10 @@ class ChatTile extends StatelessWidget {
     if (typing.isNotEmpty) {
       final who =
           chat.isGroup
-              ? '${chat.aliasOf(typing.first) ?? users[typing.first]?.name.split(' ').first ?? 'Someone'} is typing'
-              : 'typing';
+              ? tr('{0} is typing', [
+                chat.aliasOf(typing.first) ?? users[typing.first]?.name.split(' ').first ?? 'Someone',
+              ])
+              : tr('typing');
       subtitle = TypingLabel(text: who, color: AppColors.accent);
     } else if (last != null && !chat.isClearedFor(myId)) {
       final mine = last.senderId == myId;
@@ -52,7 +55,7 @@ class ChatTile extends StatelessWidget {
           last.type == MessageType.system
               ? ''
               : mine
-              ? 'You: '
+              ? tr('You: ')
               : chat.isGroup
               ? '${chat.aliasOf(last.senderId) ?? users[last.senderId]?.name.split(' ').first ?? ''}: '
               : '';
@@ -74,7 +77,7 @@ class ChatTile extends StatelessWidget {
       );
     } else {
       subtitle = Text(
-        chat.isGroup ? 'Group created' : '',
+        chat.isGroup ? tr('Group created') : '',
         style: TextStyle(color: palette.textSecondary, fontSize: 14),
       );
     }

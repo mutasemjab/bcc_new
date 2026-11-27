@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +21,9 @@ abstract final class CallLauncher {
     if (!granted && context.mounted) {
       AppFeedback.error(
         context,
-        video ? 'Camera and microphone access are needed for video calls.' : 'Microphone access is needed for calls.',
+        video
+            ? tr('Camera and microphone access are needed for video calls.')
+            : tr('Microphone access is needed for calls.'),
       );
     }
     return granted;
@@ -48,7 +51,7 @@ abstract final class CallLauncher {
         participants: chat.participants,
         isGroup: chat.isGroup,
         // Title as the *callee* sees it (they see who is calling, or the group).
-        title: chat.isGroup ? (chat.name ?? 'Group call') : me.name,
+        title: chat.isGroup ? (chat.name ?? tr('Group call')) : me.name,
         photoUrl: chat.isGroup ? chat.photoUrl : me.photoUrl,
         type: type,
       ),
@@ -60,7 +63,7 @@ abstract final class CallLauncher {
         AppRoutes.call(call.id),
         extra: CallRouteArgs(
           isVideo: type == CallType.video,
-          displayName: chat.isGroup ? (chat.name ?? 'Group call') : (peer?.name ?? ''),
+          displayName: chat.isGroup ? (chat.name ?? tr('Group call')) : (peer?.name ?? ''),
           displayPhoto: chat.isGroup ? chat.photoUrl : peer?.photoUrl,
           isGroup: chat.isGroup,
         ),

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fpdart/fpdart.dart';
@@ -27,7 +28,7 @@ Failure mapError(Object error) {
       case 'object-not-found':
         return const NotFoundFailure();
       default:
-        return const ServerFailure('Something went wrong. Please try again.');
+        return ServerFailure(tr('Something went wrong. Please try again.'));
     }
   }
   return const ServerFailure();
@@ -36,47 +37,49 @@ Failure mapError(Object error) {
 String _authMessage(FirebaseAuthException e) {
   switch (e.code) {
     case 'invalid-email':
-      return 'That email address looks invalid.';
+      return tr('That email address looks invalid.');
     case 'user-disabled':
-      return 'This account has been disabled.';
+      return tr('This account has been disabled.');
     case 'user-not-found':
     case 'wrong-password':
     case 'invalid-credential':
-      return 'Incorrect email or password.';
+      return tr('Incorrect email or password.');
     case 'email-already-in-use':
-      return 'An account already exists with this email.';
+      return tr('An account already exists with this email.');
     case 'weak-password':
-      return 'Choose a stronger password (at least 6 characters).';
+      return tr('Choose a stronger password (at least 6 characters).');
     case 'invalid-phone-number':
-      return 'That phone number is not valid.';
+      return tr('That phone number is not valid.');
     case 'invalid-verification-code':
-      return 'The code you entered is incorrect.';
+      return tr('The code you entered is incorrect.');
     case 'session-expired':
-      return 'The code expired. Please request a new one.';
+      return tr('The code expired. Please request a new one.');
     case 'too-many-requests':
-      return 'Too many attempts. Please wait and try again.';
+      return tr('Too many attempts. Please wait and try again.');
     case 'network-request-failed':
-      return 'No internet connection.';
+      return tr('No internet connection.');
     // ── Phone sign-in setup problems (show the real cause) ──
     case 'operation-not-allowed':
-      return 'Phone sign-in is not enabled for this app yet. (operation-not-allowed)';
+      return tr('Phone sign-in is not enabled for this app yet. (operation-not-allowed)');
     case 'app-not-authorized':
     case 'invalid-app-credential':
     case 'missing-client-identifier':
     case 'captcha-check-failed':
-      return 'This app build could not be verified for phone sign-in. Check the SHA-1/SHA-256 '
-          'fingerprints and that the Play Integrity API is enabled. (${e.code})';
+      return tr(
+        'This app build could not be verified for phone sign-in. Check the SHA-1/SHA-256 fingerprints and that the Play Integrity API is enabled. ({0})',
+        [e.code],
+      );
     case 'quota-exceeded':
-      return 'Too many SMS codes were sent today. Please try again later. (quota-exceeded)';
+      return tr('Too many SMS codes were sent today. Please try again later. (quota-exceeded)');
     case 'billing-not-enabled':
-      return 'SMS sign-in needs billing enabled on the server project. (billing-not-enabled)';
+      return tr('SMS sign-in needs billing enabled on the server project. (billing-not-enabled)');
     case 'web-context-cancelled':
-      return 'Verification was cancelled. Please try again.';
+      return tr('Verification was cancelled. Please try again.');
     default:
       final detail = (e.message ?? '').toLowerCase();
       if (detail.contains('billing')) {
-        return 'SMS sign-in needs billing enabled on the server project. (${e.code})';
+        return tr('SMS sign-in needs billing enabled on the server project. ({0})', [e.code]);
       }
-      return 'Sign-in failed (${e.code}). Please try again.';
+      return tr('Sign-in failed ({0}). Please try again.', [e.code]);
   }
 }

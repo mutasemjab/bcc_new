@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -16,7 +17,7 @@ class FontPage extends StatelessWidget {
       listenable: look,
       builder:
           (context, _) => Scaffold(
-            appBar: AppBar(title: const Text('Font')),
+            appBar: AppBar(title: Text(tr('Font'))),
             body: ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: [
@@ -28,13 +29,13 @@ class FontPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Text(
-                    'Hello! How are you today? 👋\nمرحبا! كيف حالك اليوم؟\n*Bold*  _italic_  ~strike~',
+                    tr('Hello! How are you today? 👋\nمرحبا! كيف حالك اليوم؟\n*Bold*  _italic_  ~strike~'),
                     style: GoogleFonts.getFont(look.font, fontSize: 16 * look.scale, height: 1.5),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                  child: Text('TEXT SIZE', style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  child: Text(tr('TEXT SIZE'), style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -54,7 +55,7 @@ class FontPage extends StatelessWidget {
                 for (final f in AppearanceSettings.fonts)
                   ListTile(
                     title: Text(f.label, style: GoogleFonts.getFont(f.family, fontSize: 17)),
-                    subtitle: Text('Aa Bb 123 — أ ب ت', style: GoogleFonts.getFont(f.family)),
+                    subtitle: Text(tr('Aa Bb 123 — أ ب ت'), style: GoogleFonts.getFont(f.family)),
                     trailing:
                         look.font == f.family ? const Icon(Icons.check_circle_rounded, color: AppColors.primary) : null,
                     onTap: () => look.setFont(f.family),
@@ -62,8 +63,9 @@ class FontPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'Tip: in a message, select text to make it bold, italic, strikethrough or monospace — '
-                    'or type *bold*, _italic_, ~strike~ or ```code```.',
+                    tr(
+                      'Tip: in a message, select text to make it bold, italic, strikethrough or monospace — or type *bold*, _italic_, ~strike~ or ```code```.',
+                    ),
                     style: TextStyle(color: context.palette.textSecondary, height: 1.4),
                   ),
                 ),

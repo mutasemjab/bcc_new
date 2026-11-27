@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/env.dart';
 import '../core/services/chat_notifications.dart';
 import '../core/services/push_service.dart';
 import '../core/theme/app_theme.dart';
+import '../core/l10n/l10n.dart';
 import '../core/theme/appearance_settings.dart';
 import '../core/theme/theme_cubit.dart';
 import '../features/auth/presentation/bloc/session/session_bloc.dart';
@@ -49,10 +51,31 @@ class _BccChatAppState extends State<BccChatApp> {
     _listenForNotificationTaps();
     // Presence: online while the app is in the foreground.
     _lifecycle = AppLifecycleListener(
-      onResume: () => _session.add(const SessionForegroundChanged(true)),
-      onPause: () => _session.add(const SessionForegroundChanged(false)),
-      onDetach: () => _session.add(const SessionForegroundChanged(false)),
+      onResume: () {
+        sl<L10n>().systemLocaleChanged();
+        _session.add(const SessionForegroundChanged(true));
+        _startHeartbeat();
+      },
+      onPause: () {
+        _heartbeat?.cancel();
+        _session.add(const SessionForegroundChanged(false));
+      },
+      onDetach: () {
+        _heartbeat?.cancel();
+        _session.add(const SessionForegroundChanged(false));
+      },
     );
+    _startHeartbeat();
+  }
+
+  /// "Online" heartbeat every minute while the app is on screen. If the app
+  /// is killed the heartbeats stop and others see me offline within 2 minutes.
+  Timer? _heartbeat;
+  void _startHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (_session.state is SessionAuthenticated) _session.add(const SessionForegroundChanged(true));
+    });
   }
 
   /// Opening a notification jumps straight into that chat — whether it was a
@@ -99,6 +122,7 @@ class _BccChatAppState extends State<BccChatApp> {
   @override
   void dispose() {
     _pushTapSub?.cancel();
+    _heartbeat?.cancel();
     _lifecycle.dispose();
     _router.dispose();
     super.dispose();
@@ -121,16 +145,27 @@ class _BccChatAppState extends State<BccChatApp> {
           builder:
               (context, mode) => ListenableBuilder(
                 // Font family + text size chosen in Settings → Font.
-                listenable: sl<AppearanceSettings>(),
+                // Font / text size (Settings → Font) and language (Settings → Language).
+                listenable: Listenable.merge([sl<AppearanceSettings>(), sl<L10n>()]),
                 builder: (context, _) {
                   final look = sl<AppearanceSettings>();
                   return MaterialApp.router(
+                    // New language → rebuild every screen with the new texts.
+                    key: ValueKey(sl<L10n>().locale.languageCode),
                     title: Env.appName,
                     debugShowCheckedModeBanner: false,
                     theme: AppTheme.themed(Brightness.light, look.font),
                     darkTheme: AppTheme.themed(Brightness.dark, look.font),
                     themeMode: mode,
                     routerConfig: _router,
+                    // Arabic → right-to-left everywhere, plus Arabic date/time pickers etc.
+                    locale: sl<L10n>().locale,
+                    supportedLocales: const [Locale('en'), Locale('ar')],
+                    localizationsDelegates: const [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
                     builder:
                         (context, child) => MediaQuery(
                           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(look.scale)),

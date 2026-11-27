@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -34,14 +35,14 @@ class ChatsPage extends StatelessWidget {
                 title: ShaderMask(
                   shaderCallback: (r) => AppColors.brandGradient.createShader(r),
                   child: Text(
-                    'BCC Chat',
+                    tr('BCC Chat'),
                     style: context.text.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
               actions: [
                 IconButton(
-                  tooltip: 'New group',
+                  tooltip: tr('New group'),
                   onPressed: () => context.push(AppRoutes.newGroup),
                   icon: const Icon(Icons.group_add_rounded),
                 ),
@@ -53,8 +54,8 @@ class ChatsPage extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(18, 4, 18, 10),
                 child: TextField(
                   onChanged: (q) => context.read<ChatListBloc>().add(ChatListSearchChanged(q)),
-                  decoration: const InputDecoration(
-                    hintText: 'Search chats',
+                  decoration: InputDecoration(
+                    hintText: tr('Search chats'),
                     prefixIcon: Icon(Icons.search_rounded),
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -71,17 +72,20 @@ class ChatsPage extends StatelessWidget {
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.forum_rounded,
-                  title: state.query.isNotEmpty || state.filter != ChatFilter.all ? 'Nothing here' : 'No chats yet',
+                  title:
+                      state.query.isNotEmpty || state.filter != ChatFilter.all
+                          ? tr('Nothing here')
+                          : tr('No chats yet'),
                   message:
                       state.query.isNotEmpty
-                          ? 'No chats match "${state.query}".'
-                          : 'Start a conversation with friends and it will appear here.',
+                          ? tr('No chats match "{0}".', [state.query])
+                          : tr('Start a conversation with friends and it will appear here.'),
                   action:
                       state.query.isEmpty && state.filter == ChatFilter.all
                           ? SizedBox(
                             width: 220,
                             child: GradientButton(
-                              label: 'Start a chat',
+                              label: tr('Start a chat'),
                               icon: Icons.add_comment_rounded,
                               onPressed: () => context.push(AppRoutes.newChat),
                             ),
@@ -128,7 +132,7 @@ class ChatsPage extends StatelessWidget {
               children: [
                 ListTile(
                   leading: Icon(chat.isPinnedFor(state.uid) ? Icons.push_pin_outlined : Icons.push_pin_rounded),
-                  title: Text(chat.isPinnedFor(state.uid) ? 'Unpin chat' : 'Pin chat'),
+                  title: Text(chat.isPinnedFor(state.uid) ? tr('Unpin chat') : tr('Pin chat')),
                   onTap: () {
                     bloc.add(ChatPinToggled(chat));
                     Navigator.pop(ctx);
@@ -136,7 +140,7 @@ class ChatsPage extends StatelessWidget {
                 ),
                 ListTile(
                   leading: Icon(chat.isMutedFor(state.uid) ? Icons.volume_up_rounded : Icons.volume_off_rounded),
-                  title: Text(chat.isMutedFor(state.uid) ? 'Unmute notifications' : 'Mute notifications'),
+                  title: Text(chat.isMutedFor(state.uid) ? tr('Unmute notifications') : tr('Mute notifications')),
                   onTap: () {
                     bloc.add(ChatMuteToggled(chat));
                     Navigator.pop(ctx);
@@ -146,7 +150,7 @@ class ChatsPage extends StatelessWidget {
                 if (chat.isGroup && (chat.closed || !chat.participants.contains(state.uid)))
                   ListTile(
                     leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
-                    title: const Text('Delete group', style: TextStyle(color: AppColors.danger)),
+                    title: Text(tr('Delete group'), style: TextStyle(color: AppColors.danger)),
                     onTap: () {
                       Navigator.pop(ctx);
                       ChatActions.deleteChat(context, chat.id, state.uid);
@@ -155,7 +159,7 @@ class ChatsPage extends StatelessWidget {
                 if (chat.isGroup)
                   ListTile(
                     leading: const Icon(Icons.info_outline_rounded),
-                    title: const Text('Group info'),
+                    title: Text(tr('Group info')),
                     onTap: () {
                       Navigator.pop(ctx);
                       context.push(AppRoutes.groupInfo(chat.id));
@@ -164,7 +168,7 @@ class ChatsPage extends StatelessWidget {
                 else if (chat.peerId(state.uid) != null)
                   ListTile(
                     leading: const Icon(Icons.person_outline_rounded),
-                    title: const Text('View contact'),
+                    title: Text(tr('View contact')),
                     onTap: () {
                       Navigator.pop(ctx);
                       context.push(AppRoutes.userProfile(chat.peerId(state.uid)!));
@@ -186,9 +190,9 @@ class _FilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final unreadCount = state.chats.where((c) => c.unreadFor(state.uid) > 0).length;
     final items = [
-      (ChatFilter.all, 'All'),
-      (ChatFilter.unread, unreadCount > 0 ? 'Unread  $unreadCount' : 'Unread'),
-      (ChatFilter.groups, 'Groups'),
+      (ChatFilter.all, tr('All')),
+      (ChatFilter.unread, unreadCount > 0 ? tr('Unread  {0}', [unreadCount]) : tr('Unread')),
+      (ChatFilter.groups, tr('Groups')),
     ];
     return SizedBox(
       height: 44,

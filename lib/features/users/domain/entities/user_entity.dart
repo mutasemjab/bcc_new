@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:equatable/equatable.dart';
 
 class UserEntity extends Equatable {

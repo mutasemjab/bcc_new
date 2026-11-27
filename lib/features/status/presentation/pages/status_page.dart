@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,9 +28,10 @@ class StatusPage extends StatelessWidget {
     if (file == null || !context.mounted) return;
     // Opened directly (not via the router) so the picked photo can't get lost
     // when the app resumes from the gallery.
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => ImageStatusEditorPage(image: file)),
-    );
+    await Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => ImageStatusEditorPage(image: file)));
   }
 
   @override
@@ -52,7 +54,10 @@ class StatusPage extends StatelessWidget {
                   backgroundColor: context.theme.scaffoldBackgroundColor,
                   flexibleSpace: FlexibleSpaceBar(
                     titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 14),
-                    title: Text('Stories', style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                    title: Text(
+                      tr('Stories'),
+                      style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ),
                 SliverToBoxAdapter(
@@ -65,23 +70,23 @@ class StatusPage extends StatelessWidget {
                   ),
                 ),
                 if (state.recent.isEmpty && state.viewed.isEmpty && !state.loading)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.auto_awesome_rounded,
-                      title: 'No stories yet',
-                      message: 'Stories from people you chat with appear here for 24 hours.',
+                      title: tr('No stories yet'),
+                      message: tr('Stories from people you chat with appear here for 24 hours.'),
                     ),
                   ),
                 if (state.recent.isNotEmpty) ...[
-                  const SliverToBoxAdapter(child: _Header('Recent updates')),
+                  SliverToBoxAdapter(child: _Header(tr('Recent updates'))),
                   SliverList.builder(
                     itemCount: state.recent.length,
                     itemBuilder: (_, i) => _StatusTile(group: state.recent[i], me: me.id, users: users),
                   ),
                 ],
                 if (state.viewed.isNotEmpty) ...[
-                  const SliverToBoxAdapter(child: _Header('Viewed')),
+                  SliverToBoxAdapter(child: _Header(tr('Viewed'))),
                   SliverList.builder(
                     itemCount: state.viewed.length,
                     itemBuilder: (_, i) => _StatusTile(group: state.viewed[i], me: me.id, users: users),
@@ -180,13 +185,13 @@ class _MyStatusTile extends StatelessWidget {
           ],
         ),
       ),
-      title: Text('My story', style: context.text.titleMedium),
+      title: Text(tr('My story'), style: context.text.titleMedium),
       subtitle: Text(
         posting
-            ? 'Sharing…'
+            ? tr('Sharing…')
             : count == 0
-            ? 'Tap to add a story'
-            : '$count update${count == 1 ? '' : 's'} • ${Formatters.relative(mine!.latest)}',
+            ? tr('Tap to add a story')
+            : tr('{0} update{1} • {2}', [count, count == 1 ? '' : 's', Formatters.relative(mine!.latest)]),
         style: TextStyle(color: context.palette.textSecondary),
       ),
     );

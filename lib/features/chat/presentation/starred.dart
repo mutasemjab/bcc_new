@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -121,16 +122,16 @@ class StarredMessagesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = sl<StarredStore>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Starred messages')),
+      appBar: AppBar(title: Text(tr('Starred messages'))),
       body: ListenableBuilder(
         listenable: store,
         builder: (context, _) {
           final items = store.items.where((s) => chatId == null || s.chatId == chatId).toList();
           if (items.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.star_outline_rounded,
-              title: 'No starred messages',
-              message: 'Long-press a message and tap ⭐ Star to save it here.',
+              title: tr('No starred messages'),
+              message: tr('Long-press a message and tap ⭐ Star to save it here.'),
             );
           }
           return ListView.separated(

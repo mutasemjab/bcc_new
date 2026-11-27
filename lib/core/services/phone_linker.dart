@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -52,7 +53,7 @@ class PhoneLinker {
 
   Future<void> _link(PhoneAuthCredential credential) async {
     final user = _auth.currentUser;
-    if (user == null) throw 'You are signed out.';
+    if (user == null) throw tr('You are signed out.');
     if (user.phoneNumber == null) {
       await user.linkWithCredential(credential);
     } else {
@@ -61,18 +62,18 @@ class PhoneLinker {
     await user.reload();
     await user.getIdToken(true); // the rules read the new number from the token
     final phone = _auth.currentUser?.phoneNumber;
-    if (phone == null) throw 'Could not verify this number.';
+    if (phone == null) throw tr('Could not verify this number.');
     await _db.collection(FirestorePaths.users).doc(user.uid).set({'phone': phone}, SetOptions(merge: true));
   }
 
   static String _friendly(Object e) {
     if (e is FirebaseAuthException) {
       if (e.code == 'credential-already-in-use' || e.code == 'account-exists-with-different-credential') {
-        return 'This number is already used by another account.';
+        return tr('This number is already used by another account.');
       }
-      if (e.code == 'provider-already-linked') return 'A phone number is already linked to this account.';
+      if (e.code == 'provider-already-linked') return tr('A phone number is already linked to this account.');
       return mapError(e).message;
     }
-    return e is String ? e : 'Could not verify this number.';
+    return e is String ? e : tr('Could not verify this number.');
   }
 }

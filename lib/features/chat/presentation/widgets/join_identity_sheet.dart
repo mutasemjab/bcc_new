@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -25,14 +26,17 @@ Future<JoinIdentity?> showJoinIdentitySheet(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Join "$groupName"', style: ctx.text.titleLarge),
+                Text(tr('Join "{0}"', [groupName]), style: ctx.text.titleLarge),
                 const SizedBox(height: 4),
-                Text('How do you want to appear to the members?', style: TextStyle(color: ctx.palette.textSecondary)),
+                Text(
+                  tr('How do you want to appear to the members?'),
+                  style: TextStyle(color: ctx.palette.textSecondary),
+                ),
                 const SizedBox(height: 16),
                 _Option(
                   leading: AppAvatar(name: myName, imageUrl: myPhotoUrl, size: 46),
-                  title: 'Join as $myName',
-                  body: 'Members see your name, photo and profile.',
+                  title: tr('Join as {0}', [myName]),
+                  body: tr('Members see your name, photo and profile.'),
                   onTap: () => Navigator.pop(ctx, JoinIdentity.me),
                 ),
                 const SizedBox(height: 10),
@@ -43,11 +47,10 @@ Future<JoinIdentity?> showJoinIdentitySheet(
                     decoration: BoxDecoration(shape: BoxShape.circle, color: ctx.palette.surfaceHigh),
                     child: Icon(Icons.visibility_off_rounded, color: ctx.palette.textSecondary),
                   ),
-                  title: 'Join anonymously',
-                  body:
-                      'Members see a nickname like "Member #4821" — no name or photo. '
-                      'You can reveal yourself later from Group info, but after revealing you '
-                      'must wait 24 hours before you can hide again.',
+                  title: tr('Join anonymously'),
+                  body: tr(
+                    'Members see a nickname like "Member #4821" — no name or photo. You can reveal yourself later from Group info, but after revealing you must wait 24 hours before you can hide again.',
+                  ),
                   onTap: () => Navigator.pop(ctx, JoinIdentity.anonymous),
                 ),
               ],
@@ -122,12 +125,12 @@ Future<String?> askSecretName(BuildContext context, {required String realName}) 
         (ctx) => StatefulBuilder(
           builder:
               (ctx, setState) => AlertDialog(
-                title: const Text('Your secret name'),
+                title: Text(tr('Your secret name')),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Members will see this name instead of your real name and number.'),
+                    Text(tr('Members will see this name instead of your real name and number.')),
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
@@ -138,19 +141,19 @@ Future<String?> askSecretName(BuildContext context, {required String realName}) 
                   ],
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
                   FilledButton(
                     onPressed: () {
                       final v = controller.text.trim();
                       if (v.length < 2) {
-                        setState(() => error = 'At least 2 characters');
+                        setState(() => error = tr('At least 2 characters'));
                       } else if (v.toLowerCase() == realName.trim().toLowerCase()) {
-                        setState(() => error = "Don't use your real name");
+                        setState(() => error = tr('Don\'t use your real name'));
                       } else {
                         Navigator.pop(ctx, v);
                       }
                     },
-                    child: const Text('Join'),
+                    child: Text(tr('Join')),
                   ),
                 ],
               ),

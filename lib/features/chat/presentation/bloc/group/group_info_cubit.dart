@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -26,7 +27,7 @@ class GroupInfoState extends Equatable {
     final u = members[uid];
     final alias = chat?.aliasOf(uid);
     if (alias == null) return u;
-    return UserEntity(id: uid, name: alias, about: 'Anonymous member');
+    return UserEntity(id: uid, name: alias, about: tr('Anonymous member'));
   }
 
   Map<String, UserEntity> get displayMembers => {
@@ -139,7 +140,7 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
       _run(() => _updateGroup((chatId: chatId, name: null, description: d, photo: null)));
 
   Future<void> setPhoto(File f) =>
-      _run(() => _updateGroup((chatId: chatId, name: null, description: null, photo: f)), success: 'Photo updated');
+      _run(() => _updateGroup((chatId: chatId, name: null, description: null, photo: f)), success: tr('Photo updated'));
 
   Future<void> addMembers(List<UserEntity> users) => _run(
     () => _addMembers((
@@ -160,11 +161,11 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
     final makeAdmin = !(state.chat?.isAdmin(user.id) ?? false);
     // Admins are public: an anonymous member must reveal first.
     if (makeAdmin && (state.chat?.isAnonymous(user.id) ?? false)) {
-      emit(state.copyWith(message: 'Anonymous members must reveal their identity before becoming admin.'));
+      emit(state.copyWith(message: tr('Anonymous members must reveal their identity before becoming admin.')));
       return;
     }
     if (!makeAdmin && (state.chat?.isOwner(user.id) ?? false)) {
-      emit(state.copyWith(message: "The group owner can't be dismissed as admin."));
+      emit(state.copyWith(message: tr('The group owner can\'t be dismissed as admin.')));
       return;
     }
     await _run(() => _setAdmin((chatId: chatId, uid: user.id, isAdmin: makeAdmin)));
@@ -172,7 +173,7 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
 
   Future<void> setSecret(bool secret) => _run(
     () => _membership.setSecret(chatId, secret),
-    success: secret ? 'Group is now secret' : 'Group is no longer secret',
+    success: secret ? tr('Group is now secret') : tr('Group is no longer secret'),
   );
 
   /// The owner of the group: leaving ends it for everyone.
@@ -195,7 +196,7 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
   Future<void> revealIdentity() async {
     final chat = state.chat;
     if (chat == null) return;
-    await _run(() => _membership.reveal(chat, me.id, me.name), success: 'Your identity is now visible');
+    await _run(() => _membership.reveal(chat, me.id, me.name), success: tr('Your identity is now visible'));
   }
 
   Future<void> hideIdentity({String? alias}) async {
@@ -203,7 +204,7 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
     if (chat == null) return;
     await _run(
       () => _membership.hide(chat, me.id, me.name, alias ?? IdUtils.anonymousAlias()),
-      success: 'You are now anonymous in this group',
+      success: tr('You are now anonymous in this group'),
     );
   }
 
@@ -226,10 +227,10 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
   }
 
   Future<void> cancelEmailInvite(String email) =>
-      _run(() => _membership.cancelEmailInvite(chatId, email), success: 'Invitation cancelled');
+      _run(() => _membership.cancelEmailInvite(chatId, email), success: tr('Invitation cancelled'));
 
   Future<void> cancelInvite(UserEntity user) =>
-      _run(() => _membership.cancelInvite(chatId, user.id), success: 'Invitation cancelled');
+      _run(() => _membership.cancelInvite(chatId, user.id), success: tr('Invitation cancelled'));
 
   /// Returns the link code (creating one if needed).
   Future<String?> ensureInviteCode({bool reset = false}) async {
@@ -245,7 +246,7 @@ class GroupInfoCubit extends Cubit<GroupInfoState> {
   Future<void> revokeLink() async {
     final code = state.chat?.inviteCode;
     if (code == null) return;
-    await _run(() => _membership.revokeLink(chatId, code), success: 'Invite link turned off');
+    await _run(() => _membership.revokeLink(chatId, code), success: tr('Invite link turned off'));
   }
 
   @override

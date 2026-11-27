@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -37,8 +38,10 @@ Future<void> showForwardSheet(BuildContext context, MessageEntity message) async
   if (!context.mounted) return;
   r.match(
     (f) => AppFeedback.error(context, f.message),
-    (_) =>
-        AppFeedback.info(context, selected.length == 1 ? 'Message forwarded' : 'Forwarded to ${selected.length} chats'),
+    (_) => AppFeedback.info(
+      context,
+      selected.length == 1 ? tr('Message forwarded') : tr('Forwarded to {0} chats', [selected.length]),
+    ),
   );
 }
 
@@ -63,7 +66,7 @@ class _ForwardPickerState extends State<_ForwardPicker> {
       } else if (_selected.length < ChatTools.maxForwardTargets) {
         _selected.add(c);
       } else {
-        AppFeedback.info(context, 'You can share with up to 5 chats');
+        AppFeedback.info(context, tr('You can share with up to 5 chats'));
       }
     });
   }
@@ -81,7 +84,7 @@ class _ForwardPickerState extends State<_ForwardPicker> {
             child: Row(
               children: [
                 IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-                Expanded(child: Text('Forward to…', style: context.text.titleLarge)),
+                Expanded(child: Text(tr('Forward to…'), style: context.text.titleLarge)),
               ],
             ),
           ),
@@ -89,7 +92,7 @@ class _ForwardPickerState extends State<_ForwardPicker> {
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: TextField(
               onChanged: (v) => setState(() => _query = v),
-              decoration: const InputDecoration(hintText: 'Search', prefixIcon: Icon(Icons.search_rounded)),
+              decoration: InputDecoration(hintText: tr('Search'), prefixIcon: Icon(Icons.search_rounded)),
             ),
           ),
           Expanded(

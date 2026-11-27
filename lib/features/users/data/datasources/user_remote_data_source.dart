@@ -41,12 +41,24 @@ class FirestoreUserDataSource implements UserRemoteDataSource {
 
   /// Online / last seen of [uid]. Reading is denied by the security rules if
   /// that user blocked me — which simply looks like "hidden".
-  Stream<({bool online, DateTime? lastSeen})> _presenceOf(String uid) => _presence
-      .doc(uid)
-      .snapshots()
+  Stream<({bool online, DateTime? lastSeen})> _presenceOf(String uid) => Rx.combineLatest2(
+        _presence.doc(uid).snapshots(),
+        // Re-check every 30 s: a killed app sends no update, it just goes stale.
+        Stream<int>.periodic(const Duration(seconds: 30), (i) => i).startWith(0),
+        (DocumentSnapshot<Map<String, dynamic>> d, int _) => d,
+      )
       .map<({bool online, DateTime? lastSeen})>((d) {
         final data = d.data() ?? const <String, dynamic>{};
-        return (online: data['online'] == true, lastSeen: (data['lastSeen'] as Timestamp?)?.toDate());
+        final lastSeen = (data['lastSeen'] as Timestamp?)?.toDate();
+        final beat = (data['heartbeatAt'] as Timestamp?)?.toDate();
+        // A killed app can't say "offline". Online only counts while the app
+        // keeps sending heartbeats (every minute) — stale for 2 min = offline.
+        final fresh = beat != null && DateTime.now().difference(beat) < const Duration(minutes: 2);
+        final online = data['online'] == true && fresh;
+        // When it went stale, the last heartbeat is the real "last seen"
+        // (only if the user shares last seen at all).
+        final seen = lastSeen == null || beat == null ? lastSeen : (beat.isAfter(lastSeen) ? beat : lastSeen);
+        return (online: online, lastSeen: seen);
       })
       .onErrorReturn((online: false, lastSeen: null));
 
@@ -174,6 +186,8 @@ class FirestoreUserDataSource implements UserRemoteDataSource {
     await _presence.doc(uid).set({
       'online': hideOnline ? FieldValue.delete() : online,
       'lastSeen': hideLastSeen ? FieldValue.delete() : FieldValue.serverTimestamp(),
+      // Heartbeat: proves the app is really open (see _presenceOf).
+      'heartbeatAt': hideOnline && hideLastSeen ? FieldValue.delete() : FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     // Older app versions kept presence on the public profile — remove it.
     if (online) {

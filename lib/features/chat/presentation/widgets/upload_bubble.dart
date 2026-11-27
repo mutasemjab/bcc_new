@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -86,8 +87,8 @@ class UploadBubble extends StatelessWidget {
   };
 
   static String _label(MessageType t) => switch (t) {
-    MessageType.video => 'Sending video…',
-    MessageType.audio => 'Sending voice message…',
-    _ => 'Sending file…',
+    MessageType.video => tr('Sending video…'),
+    MessageType.audio => tr('Sending voice message…'),
+    _ => tr('Sending file…'),
   };
 }

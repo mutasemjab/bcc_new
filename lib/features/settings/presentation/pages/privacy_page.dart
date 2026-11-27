@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -39,29 +40,30 @@ class PrivacyPage extends StatelessWidget {
         final me = session.user;
         final secondary = TextStyle(color: context.palette.textSecondary, fontSize: 13, height: 1.35);
         return Scaffold(
-          appBar: AppBar(title: const Text('Privacy')),
+          appBar: AppBar(title: Text(tr('Privacy'))),
           body: ListView(
             children: [
-              const _Header('Who can see my personal info'),
+              _Header(tr('Who can see my personal info')),
               SwitchListTile(
                 value: !me.hideLastSeen,
                 onChanged: (v) => _update(context, me.id, hideLastSeen: !v),
                 activeThumbColor: AppColors.primary,
-                title: const Text('Last seen'),
-                subtitle: Text(me.hideLastSeen ? 'Nobody' : 'Everyone', style: secondary),
+                title: Text(tr('Last seen')),
+                subtitle: Text(me.hideLastSeen ? tr('Nobody') : tr('Everyone'), style: secondary),
               ),
               SwitchListTile(
                 value: !me.hideOnline,
                 onChanged: (v) => _update(context, me.id, hideOnline: !v),
                 activeThumbColor: AppColors.primary,
-                title: const Text('Online'),
-                subtitle: Text(me.hideOnline ? 'Nobody' : 'Everyone', style: secondary),
+                title: Text(tr('Online')),
+                subtitle: Text(me.hideOnline ? tr('Nobody') : tr('Everyone'), style: secondary),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
-                  "If you don't share your last seen or online status, you won't be able to see other "
-                  "people's last seen or online status.",
+                  tr(
+                    'If you don\'t share your last seen or online status, you won\'t be able to see other people\'s last seen or online status.',
+                  ),
                   style: secondary,
                 ),
               ),
@@ -70,10 +72,11 @@ class PrivacyPage extends StatelessWidget {
                 value: me.readReceipts,
                 onChanged: (v) => _update(context, me.id, readReceipts: v),
                 activeThumbColor: AppColors.primary,
-                title: const Text('Read receipts'),
+                title: Text(tr('Read receipts')),
                 subtitle: Text(
-                  "If turned off, you won't send or receive read receipts (blue ticks) in individual chats. "
-                  'Read receipts are always sent for group chats.',
+                  tr(
+                    'If turned off, you won\'t send or receive read receipts (blue ticks) in individual chats. Read receipts are always sent for group chats.',
+                  ),
                   style: secondary,
                 ),
               ),
@@ -83,7 +86,7 @@ class PrivacyPage extends StatelessWidget {
                 builder:
                     (context, _) => ListTile(
                       leading: const Icon(Icons.block_rounded, color: AppColors.danger),
-                      title: const Text('Blocked contacts'),
+                      title: Text(tr('Blocked contacts')),
                       subtitle: Text('${sl<BlockList>().blocked.length}', style: secondary),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap:
@@ -107,15 +110,15 @@ class BlockedContactsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final list = sl<BlockList>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Blocked contacts')),
+      appBar: AppBar(title: Text(tr('Blocked contacts'))),
       body: ListenableBuilder(
         listenable: list,
         builder: (context, _) {
           if (list.blocked.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.block_rounded,
-              title: 'No blocked contacts',
-              message: "Blocked contacts can't call you or send you messages.",
+              title: tr('No blocked contacts'),
+              message: tr('Blocked contacts can\'t call you or send you messages.'),
             );
           }
           return StreamBuilder<Map<String, UserEntity>>(
@@ -127,13 +130,13 @@ class BlockedContactsPage extends StatelessWidget {
                   for (final id in list.blocked)
                     UserTile(
                       user: users[id] ?? UserEntity(id: id, name: 'Unknown'),
-                      subtitle: 'Blocked',
+                      subtitle: tr('Blocked'),
                       trailing: TextButton(
                         onPressed: () async {
                           final err = await list.unblock(id);
-                          if (context.mounted) AppFeedback.info(context, err ?? 'Unblocked');
+                          if (context.mounted) AppFeedback.info(context, err ?? tr('Unblocked'));
                         },
-                        child: const Text('Unblock'),
+                        child: Text(tr('Unblock')),
                       ),
                     ),
                 ],

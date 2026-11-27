@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -50,7 +51,7 @@ class _TextStatusEditorPageState extends State<TextStatusEditorPage> {
             leading: const CloseButton(color: Colors.white),
             actions: [
               IconButton(
-                tooltip: 'Background',
+                tooltip: tr('Background'),
                 onPressed: () => setState(() => _colorIndex = (_colorIndex + 1) % AppColors.storyBackgrounds.length),
                 icon: const Icon(Icons.palette_rounded, color: Colors.white),
               ),
@@ -67,13 +68,13 @@ class _TextStatusEditorPageState extends State<TextStatusEditorPage> {
                 textAlign: TextAlign.center,
                 cursorColor: Colors.white,
                 style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700, height: 1.3),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   filled: false,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   counterText: '',
-                  hintText: 'Type a status',
+                  hintText: tr('Type a status'),
                   hintStyle: TextStyle(color: Colors.white54, fontSize: 30, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -126,7 +127,7 @@ class _ImageStatusEditorPageState extends State<ImageStatusEditorPage> {
                       controller: _caption,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Add a caption…',
+                        hintText: tr('Add a caption…'),
                         hintStyle: const TextStyle(color: Colors.white60),
                         fillColor: Colors.white.withValues(alpha: 0.14),
                         border: OutlineInputBorder(

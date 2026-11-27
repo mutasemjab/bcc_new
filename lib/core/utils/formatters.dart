@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../l10n/l10n.dart';
+
 abstract final class Formatters {
   static bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -8,7 +10,7 @@ abstract final class Formatters {
     if (date == null) return '';
     final now = DateTime.now();
     if (_sameDay(date, now)) return DateFormat.Hm().format(date);
-    if (_sameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (_sameDay(date, now.subtract(const Duration(days: 1)))) return tr('Yesterday');
     if (now.difference(date).inDays < 7) return DateFormat.E().format(date);
     return DateFormat('dd/MM/yy').format(date);
   }
@@ -18,28 +20,28 @@ abstract final class Formatters {
   /// Header chip between message groups.
   static String dayHeader(DateTime date) {
     final now = DateTime.now();
-    if (_sameDay(date, now)) return 'Today';
-    if (_sameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (_sameDay(date, now)) return tr('Today');
+    if (_sameDay(date, now.subtract(const Duration(days: 1)))) return tr('Yesterday');
     if (now.difference(date).inDays < 7) return DateFormat.EEEE().format(date);
     return DateFormat.yMMMMd().format(date);
   }
 
   static String lastSeen(DateTime? date) {
-    if (date == null) return 'last seen recently';
+    if (date == null) return tr('last seen recently');
     final now = DateTime.now();
-    if (_sameDay(date, now)) return 'last seen today at ${DateFormat.Hm().format(date)}';
+    if (_sameDay(date, now)) return tr('last seen today at {0}', [DateFormat.Hm().format(date)]);
     if (_sameDay(date, now.subtract(const Duration(days: 1)))) {
-      return 'last seen yesterday at ${DateFormat.Hm().format(date)}';
+      return tr('last seen yesterday at {0}', [DateFormat.Hm().format(date)]);
     }
-    return 'last seen ${DateFormat.MMMd().format(date)}';
+    return tr('last seen {0}', [DateFormat.MMMd().format(date)]);
   }
 
   static String relative(DateTime? date) {
     if (date == null) return '';
     final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 1) return tr('Just now');
+    if (diff.inMinutes < 60) return tr('{0}m ago', [diff.inMinutes]);
+    if (diff.inHours < 24) return tr('{0}h ago', [diff.inHours]);
     return chatListTime(date);
   }
 

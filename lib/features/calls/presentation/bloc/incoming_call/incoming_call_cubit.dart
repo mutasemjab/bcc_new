@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -37,7 +38,7 @@ class IncomingCallCubit extends Cubit<CallEntity?> {
   /// Returns null on success, or an error message.
   Future<String?> accept(CallEntity call) async {
     final uid = _uid;
-    if (uid == null) return 'Not signed in';
+    if (uid == null) return tr('Not signed in');
     final r = await _accept((call.id, uid));
     return r.fold<String?>((f) => f.message, (_) => null);
   }

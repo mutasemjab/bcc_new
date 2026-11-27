@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -33,7 +34,7 @@ Future<bool> acceptGroupInvite(BuildContext context, {required String chatId, re
       return false;
     },
     (_) {
-      if (alias != null) AppFeedback.info(context, 'You joined as $alias');
+      if (alias != null) AppFeedback.info(context, tr('You joined as {0}', [alias]));
       return true;
     },
   );
@@ -78,7 +79,7 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
 
   Future<void> _accept(ChatEntity chat) async {
     setState(() => _busy.add(chat.id));
-    final ok = await acceptGroupInvite(context, chatId: chat.id, groupName: chat.name ?? 'Group');
+    final ok = await acceptGroupInvite(context, chatId: chat.id, groupName: chat.name ?? tr('Group'));
     if (!mounted) return;
     setState(() => _busy.remove(chat.id));
     if (ok) context.push(AppRoutes.conversation(chat.id));
@@ -87,9 +88,9 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
   Future<void> _decline(ChatEntity chat) async {
     final ok = await AppFeedback.confirm(
       context,
-      title: 'Decline invitation?',
-      message: 'You won\'t join "${chat.name ?? 'this group'}". An admin can invite you again later.',
-      confirmLabel: 'Decline',
+      title: tr('Decline invitation?'),
+      message: tr('You won\'t join "{0}". An admin can invite you again later.', [chat.name ?? 'this group']),
+      confirmLabel: tr('Decline'),
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -109,7 +110,7 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
           child: Text(
-            'GROUP INVITATIONS',
+            tr('GROUP INVITATIONS'),
             style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.1),
           ),
         ),
@@ -126,16 +127,16 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
               children: [
                 Row(
                   children: [
-                    AppAvatar(name: chat.name ?? 'Group', imageUrl: chat.photoUrl, size: 48, isGroup: true),
+                    AppAvatar(name: chat.name ?? tr('Group'), imageUrl: chat.photoUrl, size: 48, isGroup: true),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(chat.name ?? 'Group', style: context.text.titleMedium),
+                          Text(chat.name ?? tr('Group'), style: context.text.titleMedium),
                           const SizedBox(height: 2),
                           Text(
-                            '${_inviterName(chat)} invited you • ${chat.participants.length} members',
+                            tr('{0} invited you • {1} members', [_inviterName(chat), chat.participants.length]),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: context.palette.textSecondary, fontSize: 13),
@@ -152,14 +153,14 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
                       child: OutlinedButton(
                         onPressed: _busy.contains(chat.id) ? null : () => _decline(chat),
                         style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                        child: const Text('Decline'),
+                        child: Text(tr('Decline')),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton(
                         onPressed: _busy.contains(chat.id) ? null : () => _accept(chat),
-                        child: const Text('Accept'),
+                        child: Text(tr('Accept')),
                       ),
                     ),
                   ],
@@ -173,7 +174,7 @@ class _GroupInvitationsSectionState extends State<GroupInvitationsSection> {
 
   String _inviterName(ChatEntity chat) {
     final id = chat.invitedBy[widget.uid] ?? chat.createdBy;
-    if (id == null) return 'Someone';
-    return chat.aliasOf(id) ?? _inviters[id]?.name ?? 'Someone';
+    if (id == null) return tr('Someone');
+    return chat.aliasOf(id) ?? _inviters[id]?.name ?? tr('Someone');
   }
 }

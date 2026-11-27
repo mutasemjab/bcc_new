@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -38,7 +39,7 @@ class BrandLogo extends StatelessWidget {
         const SizedBox(height: 18),
         ShaderMask(
           shaderCallback: (r) => AppColors.brandGradient.createShader(r),
-          child: Text('BCC Chat', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white)),
+          child: Text(tr('BCC Chat'), style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white)),
         ),
       ],
     );

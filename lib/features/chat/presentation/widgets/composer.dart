@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:ui' show FontFeature;
 
 import 'dart:io';
@@ -86,7 +87,7 @@ class _ComposerState extends State<Composer> {
       setState(() => _holding = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Allow microphone access to record voice messages.')));
+      ).showSnackBar(SnackBar(content: Text(tr('Allow microphone access to record voice messages.'))));
     }
   }
 
@@ -143,7 +144,7 @@ class _ComposerState extends State<Composer> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(content: Text('Hold to record, release to send'), duration: Duration(milliseconds: 1400)),
+        SnackBar(content: Text(tr('Hold to record, release to send')), duration: Duration(milliseconds: 1400)),
       );
   }
 
@@ -211,10 +212,10 @@ class _ComposerState extends State<Composer> {
       }
 
       items.addAll([
-        ContextMenuButtonItem(label: 'Bold', onPressed: () => wrap('*')),
-        ContextMenuButtonItem(label: 'Italic', onPressed: () => wrap('_')),
-        ContextMenuButtonItem(label: 'Strikethrough', onPressed: () => wrap('~')),
-        ContextMenuButtonItem(label: 'Monospace', onPressed: () => wrap('```')),
+        ContextMenuButtonItem(label: tr('Bold'), onPressed: () => wrap('*')),
+        ContextMenuButtonItem(label: tr('Italic'), onPressed: () => wrap('_')),
+        ContextMenuButtonItem(label: tr('Strikethrough'), onPressed: () => wrap('~')),
+        ContextMenuButtonItem(label: tr('Monospace'), onPressed: () => wrap('```')),
       ]);
     }
     return AdaptiveTextSelectionToolbar.buttonItems(anchors: editable.contextMenuAnchors, buttonItems: items);
@@ -225,7 +226,7 @@ class _ComposerState extends State<Composer> {
       _focus.requestFocus();
     } else {
       _focus.unfocus();
-      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      SystemChannels.textInput.invokeMethod<void>(tr('TextInput.hide'));
     }
     setState(() => _showEmoji = !_showEmoji);
   }
@@ -251,7 +252,10 @@ class _ComposerState extends State<Composer> {
               child:
                   (widget.replyingTo != null || widget.editing != null)
                       ? _ContextBar(
-                        title: widget.editing != null ? 'Edit message' : 'Replying to ${widget.replyingToName ?? ''}',
+                        title:
+                            widget.editing != null
+                                ? tr('Edit message')
+                                : tr('Replying to {0}', [widget.replyingToName ?? '']),
                         preview: (widget.editing ?? widget.replyingTo)!.preview,
                         icon: widget.editing != null ? Icons.edit_rounded : Icons.reply_rounded,
                         onClose: () {
@@ -439,8 +443,8 @@ class _ComposerState extends State<Composer> {
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.multiline,
               style: const TextStyle(fontSize: 16),
-              decoration: const InputDecoration(
-                hintText: 'Message',
+              decoration: InputDecoration(
+                hintText: tr('Message'),
                 filled: false,
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -465,7 +469,7 @@ class _ComposerState extends State<Composer> {
                 // Send later (also: long-press the send button).
                 if (_hasText && widget.onSchedule != null && widget.editing == null)
                   IconButton(
-                    tooltip: 'Send later',
+                    tooltip: tr('Send later'),
                     onPressed: _schedule,
                     icon: Icon(Icons.schedule_send_rounded, color: palette.textSecondary),
                   ),
@@ -553,7 +557,7 @@ class _HoldRecordingBar extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(Icons.chevron_left_rounded, color: context.palette.textSecondary),
-                  Text('Slide to cancel', style: TextStyle(color: context.palette.textSecondary)),
+                  Text(tr('Slide to cancel'), style: TextStyle(color: context.palette.textSecondary)),
                 ],
               ),
             ),
@@ -581,7 +585,7 @@ class _LockedRecordingBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final levels = state.levels.length > 28 ? state.levels.sublist(state.levels.length - 28) : state.levels;
+    final levels = state.levels.length > 34 ? state.levels.sublist(state.levels.length - 34) : state.levels;
     return Container(
       height: 50,
       padding: const EdgeInsets.only(left: 4, right: 4),
@@ -589,7 +593,7 @@ class _LockedRecordingBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Delete',
+            tooltip: tr('Delete'),
             onPressed: onDelete,
             icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
           ),
@@ -606,10 +610,10 @@ class _LockedRecordingBar extends StatelessWidget {
               children: [
                 for (final l in levels)
                   AnimatedContainer(
-                    duration: const Duration(milliseconds: 90),
+                    duration: const Duration(milliseconds: 60),
                     margin: const EdgeInsets.symmetric(horizontal: 1),
-                    width: 3,
-                    height: 4 + 24 * l,
+                    width: 2.5,
+                    height: 3 + 28 * l,
                     decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2)),
                   ),
               ],
@@ -617,7 +621,7 @@ class _LockedRecordingBar extends StatelessWidget {
           ),
           // View once toggle ("1" in a circle).
           IconButton(
-            tooltip: viewOnce ? 'View once: on' : 'View once: off',
+            tooltip: viewOnce ? tr('View once: on') : tr('View once: off'),
             onPressed: onToggleViewOnce,
             icon: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
@@ -748,8 +752,8 @@ class _PanelTabs extends StatelessWidget {
       decoration: BoxDecoration(color: context.palette.surfaceHigh, borderRadius: BorderRadius.circular(17)),
       child: Row(
         children: [
-          tab('Emoji', Icons.emoji_emotions_rounded, false),
-          tab('Stickers', Icons.sticky_note_2_rounded, true),
+          tab(tr('Emoji'), Icons.emoji_emotions_rounded, false),
+          tab(tr('Stickers'), Icons.sticky_note_2_rounded, true),
         ],
       ),
     );

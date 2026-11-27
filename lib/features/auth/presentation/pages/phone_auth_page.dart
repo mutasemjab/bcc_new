@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -90,10 +91,10 @@ class _PhoneStepState extends State<_PhoneStep> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       children: [
-        Text('Your phone\nnumber', style: context.text.displaySmall?.copyWith(fontSize: 36, height: 1.1)),
+        Text(tr('Your phone\nnumber'), style: context.text.displaySmall?.copyWith(fontSize: 36, height: 1.1)),
         const SizedBox(height: 10),
         Text(
-          "We'll text you a 6-digit code to verify it's really you.",
+          tr('We\'ll text you a 6-digit code to verify it\'s really you.'),
           style: context.text.bodyLarge?.copyWith(color: context.palette.textSecondary),
         ),
         const SizedBox(height: 32),
@@ -135,14 +136,14 @@ class _PhoneStepState extends State<_PhoneStep> {
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]'))],
                       style: context.text.titleMedium,
                       onSubmitted: (_) => _submit(),
-                      decoration: const InputDecoration(hintText: '7X XXX XXXX'),
+                      decoration: InputDecoration(hintText: tr('7X XXX XXXX')),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 22),
               GradientButton(
-                label: 'Send code',
+                label: tr('Send code'),
                 isLoading: widget.state.status == PhoneAuthStatus.loading,
                 onPressed: _submit,
               ),
@@ -150,7 +151,7 @@ class _PhoneStepState extends State<_PhoneStep> {
           ),
         ),
         const SizedBox(height: 16),
-        Text('Carrier SMS charges may apply.', textAlign: TextAlign.center, style: context.text.labelSmall),
+        Text(tr('Carrier SMS charges may apply.'), textAlign: TextAlign.center, style: context.text.labelSmall),
       ],
     );
   }
@@ -205,11 +206,11 @@ class _CodeStepState extends State<_CodeStep> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       children: [
-        Text('Enter the\ncode', style: context.text.displaySmall?.copyWith(fontSize: 36, height: 1.1)),
+        Text(tr('Enter the\ncode'), style: context.text.displaySmall?.copyWith(fontSize: 36, height: 1.1)),
         const SizedBox(height: 10),
         Text.rich(
           TextSpan(
-            text: 'Sent by SMS to ',
+            text: tr('Sent by SMS to '),
             style: context.text.bodyLarge?.copyWith(color: context.palette.textSecondary),
             children: [
               TextSpan(
@@ -222,7 +223,7 @@ class _CodeStepState extends State<_CodeStep> {
         TextButton(
           style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: AlignmentDirectional.centerStart),
           onPressed: () => bloc.add(const PhoneNumberEditRequested()),
-          child: const Text('Wrong number?'),
+          child: Text(tr('Wrong number?')),
         ),
         const SizedBox(height: 20),
         GlassCard(
@@ -249,7 +250,7 @@ class _CodeStepState extends State<_CodeStep> {
                 TextButton.icon(
                   onPressed: _secondsLeft == 0 ? () => bloc.add(const PhoneCodeResendRequested()) : null,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: Text(_secondsLeft == 0 ? 'Resend code' : 'Resend in ${_secondsLeft}s'),
+                  label: Text(_secondsLeft == 0 ? tr('Resend code') : tr('Resend in {0}s', [_secondsLeft])),
                 ),
             ],
           ),

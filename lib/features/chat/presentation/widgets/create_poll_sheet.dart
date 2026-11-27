@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -80,7 +81,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
             child: Row(
               children: [
                 IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-                Expanded(child: Text('Create poll', style: context.text.titleLarge)),
+                Expanded(child: Text(tr('Create poll'), style: context.text.titleLarge)),
               ],
             ),
           ),
@@ -98,7 +99,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                   minLines: 1,
                   maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Ask a question', counterText: ''),
+                  decoration: InputDecoration(hintText: tr('Ask a question'), counterText: ''),
                 ),
                 const SizedBox(height: 18),
                 Text('OPTIONS', style: _label(context)),
@@ -111,7 +112,7 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                       maxLength: 100,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: InputDecoration(
-                        hintText: 'Option ${i + 1}',
+                        hintText: tr('Option {0}', [i + 1]),
                         counterText: '',
                         prefixIcon: const Icon(Icons.drag_indicator_rounded),
                         suffixIcon:
@@ -125,14 +126,14 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
                     ),
                   ),
                 if (_options.length >= _maxOptions)
-                  Text('You can add up to $_maxOptions options.', style: _label(context)),
+                  Text(tr('You can add up to {0} options.', [_maxOptions]), style: _label(context)),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: _multiple,
                   onChanged: (v) => setState(() => _multiple = v),
                   activeThumbColor: AppColors.primary,
-                  title: const Text('Allow multiple answers'),
+                  title: Text(tr('Allow multiple answers')),
                 ),
               ],
             ),
@@ -141,7 +142,11 @@ class _CreatePollSheetState extends State<_CreatePollSheet> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-              child: GradientButton(label: 'Send poll', icon: Icons.send_rounded, onPressed: _valid ? _submit : null),
+              child: GradientButton(
+                label: tr('Send poll'),
+                icon: Icons.send_rounded,
+                onPressed: _valid ? _submit : null,
+              ),
             ),
           ),
         ],

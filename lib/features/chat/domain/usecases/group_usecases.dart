@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
@@ -32,10 +33,10 @@ class CreateGroup extends UseCase<String, CreateGroupParams> {
   @override
   ResultFuture<String> call(CreateGroupParams p) async {
     final name = p.name.trim();
-    if (name.isEmpty) return const Left(ValidationFailure('Give your group a name.'));
-    if (p.memberIds.isEmpty) return const Left(ValidationFailure('Add at least one member.'));
+    if (name.isEmpty) return Left(ValidationFailure(tr('Give your group a name.')));
+    if (p.memberIds.isEmpty) return Left(ValidationFailure(tr('Add at least one member.')));
     if (p.memberIds.length + 1 > maxMembers) {
-      return const Left(ValidationFailure('Groups can have up to $maxMembers members.'));
+      return Left(ValidationFailure(tr('Groups can have up to {0} members.', [maxMembers])));
     }
     return _repo.createGroup(
       creatorId: p.creatorId,
@@ -54,7 +55,7 @@ class UpdateGroup extends UseCase<void, ({String chatId, String? name, String? d
   @override
   ResultFuture<void> call(({String chatId, String? name, String? description, File? photo}) p) async {
     if (p.name != null && p.name!.trim().isEmpty) {
-      return const Left(ValidationFailure('Group name cannot be empty.'));
+      return Left(ValidationFailure(tr('Group name cannot be empty.')));
     }
     return _repo.updateGroup(p.chatId, name: p.name?.trim(), description: p.description, photo: p.photo);
   }

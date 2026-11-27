@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:equatable/equatable.dart';
 
 enum MessageType { text, image, video, audio, file, location, sticker, poll, system }
@@ -138,16 +139,16 @@ class MessageEntity extends Equatable {
 
   /// Short human text used in chat list, replies and notifications.
   String get preview {
-    if (deletedForEveryone) return 'This message was deleted';
-    if (viewOnce) return type == MessageType.audio ? '① Voice message' : '① Photo';
+    if (deletedForEveryone) return tr('This message was deleted');
+    if (viewOnce) return type == MessageType.audio ? tr('① Voice message') : tr('① Photo');
     return switch (type) {
       MessageType.text || MessageType.system => text,
-      MessageType.image => text.isNotEmpty ? '📷 $text' : '📷 Photo',
-      MessageType.video => text.isNotEmpty ? '🎬 $text' : '🎬 Video',
-      MessageType.audio => '🎤 Voice message',
+      MessageType.image => text.isNotEmpty ? '📷 $text' : tr('📷 Photo'),
+      MessageType.video => text.isNotEmpty ? '🎬 $text' : tr('🎬 Video'),
+      MessageType.audio => tr('🎤 Voice message'),
       MessageType.file => '📄 ${fileName ?? 'Document'}',
-      MessageType.location => '📍 Location',
-      MessageType.sticker => '💟 Sticker',
+      MessageType.location => tr('📍 Location'),
+      MessageType.sticker => tr('💟 Sticker'),
       MessageType.poll => '📊 ${poll?.question ?? 'Poll'}',
     };
   }

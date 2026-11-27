@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -71,14 +72,14 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Media, links and docs'),
+          title: Text(tr('Media, links and docs')),
           bottom: TabBar(
             indicatorColor: AppColors.primary,
             labelColor: AppColors.primary,
             tabs: [
-              Tab(text: 'Media${_loading ? '' : ' (${_media.length})'}'),
-              Tab(text: 'Docs${_loading ? '' : ' (${_docs.length})'}'),
-              Tab(text: 'Links${_loading ? '' : ' (${_links.length})'}'),
+              Tab(text: tr('Media{0}', [_loading ? '' : ' (${_media.length})'])),
+              Tab(text: tr('Docs{0}', [_loading ? '' : ' (${_docs.length})'])),
+              Tab(text: tr('Links{0}', [_loading ? '' : ' (${_links.length})'])),
             ],
           ),
         ),
@@ -86,7 +87,7 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
             _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                ? EmptyState(icon: Icons.error_outline_rounded, title: 'Could not load', message: _error!)
+                ? EmptyState(icon: Icons.error_outline_rounded, title: tr('Could not load'), message: _error!)
                 : TabBarView(children: [_mediaGrid(), _docsList(), _linksList()]),
       ),
     );
@@ -94,10 +95,10 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
 
   Widget _mediaGrid() {
     if (_media.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.photo_library_outlined,
-        title: 'No media',
-        message: 'Photos and videos shared in this chat will appear here.',
+        title: tr('No media'),
+        message: tr('Photos and videos shared in this chat will appear here.'),
       );
     }
     return GridView.builder(
@@ -111,7 +112,7 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
       itemBuilder: (_, i) {
         final m = _media[i];
         final isVideo = m.type == MessageType.video;
-        final tag = 'media-grid-${m.id}';
+        final tag = tr('media-grid-{0}', [m.id]);
         return GestureDetector(
           onTap: () {
             if (isVideo) {
@@ -153,10 +154,10 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
 
   Widget _docsList() {
     if (_docs.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.description_outlined,
-        title: 'No documents',
-        message: 'Files shared in this chat will appear here.',
+        title: tr('No documents'),
+        message: tr('Files shared in this chat will appear here.'),
       );
     }
     return ListView.separated(
@@ -174,7 +175,7 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
             ),
             child: const Icon(Icons.insert_drive_file_rounded, color: AppColors.primary),
           ),
-          title: Text(m.fileName ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
+          title: Text(m.fileName ?? tr('Document'), maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(
             [
               if (m.fileSize != null) Formatters.fileSize(m.fileSize!),
@@ -189,10 +190,10 @@ class _ChatMediaPageState extends State<ChatMediaPage> {
 
   Widget _linksList() {
     if (_links.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.link_off_rounded,
-        title: 'No links',
-        message: 'Links shared in this chat will appear here.',
+        title: tr('No links'),
+        message: tr('Links shared in this chat will appear here.'),
       );
     }
     return ListView.separated(

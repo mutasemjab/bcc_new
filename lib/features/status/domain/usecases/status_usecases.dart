@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:fpdart/fpdart.dart';
@@ -44,8 +45,8 @@ class PostTextStatus extends UseCase<void, ({String uid, String text, int color}
   @override
   ResultFuture<void> call(({String uid, String text, int color}) p) async {
     final text = p.text.trim();
-    if (text.isEmpty) return const Left(ValidationFailure('Write something first.'));
-    if (text.length > 700) return const Left(ValidationFailure('Status is too long.'));
+    if (text.isEmpty) return Left(ValidationFailure(tr('Write something first.')));
+    if (text.length > 700) return Left(ValidationFailure(tr('Status is too long.')));
     return _repo.postText(uid: p.uid, text: text, backgroundColor: p.color);
   }
 }

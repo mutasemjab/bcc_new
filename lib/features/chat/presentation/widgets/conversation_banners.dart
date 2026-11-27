@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -76,7 +77,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      pins.length > 1 ? 'Pinned message ${i + 1} of ${pins.length}' : 'Pinned message',
+                      pins.length > 1 ? tr('Pinned message {0} of {1}', [i + 1, pins.length]) : tr('Pinned message'),
                       style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700, fontSize: 12.5),
                     ),
                     const SizedBox(height: 1),
@@ -91,7 +92,7 @@ class _PinnedMessagesBannerState extends State<PinnedMessagesBanner> {
               ),
               if (widget.onUnpin != null)
                 IconButton(
-                  tooltip: 'Unpin',
+                  tooltip: tr('Unpin'),
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.close_rounded, size: 18, color: context.palette.textSecondary),
                   onPressed: () => widget.onUnpin!(pin.messageId),
@@ -130,8 +131,8 @@ class ScheduledMessagesBar extends StatelessWidget {
                   Expanded(
                     child: Text(
                       items.length == 1
-                          ? '1 scheduled message • ${_when(items.first.sendAt)}'
-                          : '${items.length} scheduled messages • next ${_when(items.first.sendAt)}',
+                          ? tr('1 scheduled message • {0}', [_when(items.first.sendAt)])
+                          : tr('{0} scheduled messages • next {1}', [items.length, _when(items.first.sendAt)]),
                       style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
@@ -152,8 +153,8 @@ String _when(DateTime t) {
   final tomorrow = now.add(const Duration(days: 1));
   final isTomorrow = t.year == tomorrow.year && t.month == tomorrow.month && t.day == tomorrow.day;
   final time = DateFormat.Hm().format(t);
-  if (sameDay) return 'today $time';
-  if (isTomorrow) return 'tomorrow $time';
+  if (sameDay) return tr('today {0}', [time]);
+  if (isTomorrow) return tr('tomorrow {0}', [time]);
   return '${DateFormat.MMMd().format(t)} $time';
 }
 
@@ -176,12 +177,12 @@ Future<void> showScheduledMessagesSheet(BuildContext context, {required String u
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                      child: Text('Scheduled messages', style: ctx.text.titleLarge),
+                      child: Text(tr('Scheduled messages'), style: ctx.text.titleLarge),
                     ),
                     if (items.isEmpty)
                       Padding(
                         padding: const EdgeInsets.all(20),
-                        child: Text('Nothing scheduled.', style: TextStyle(color: ctx.palette.textSecondary)),
+                        child: Text(tr('Nothing scheduled.'), style: TextStyle(color: ctx.palette.textSecondary)),
                       ),
                     Flexible(
                       child: ListView(
@@ -191,7 +192,7 @@ Future<void> showScheduledMessagesSheet(BuildContext context, {required String u
                             ListTile(
                               leading: const Icon(Icons.schedule_rounded, color: AppColors.primary),
                               title: Text(m.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                              subtitle: Text('Sends ${_when(m.sendAt)}'),
+                              subtitle: Text(tr('Sends {0}', [_when(m.sendAt)])),
                               trailing: PopupMenuButton<String>(
                                 onSelected: (v) async {
                                   final r =
@@ -203,9 +204,9 @@ Future<void> showScheduledMessagesSheet(BuildContext context, {required String u
                                   }
                                 },
                                 itemBuilder:
-                                    (_) => const [
-                                      PopupMenuItem(value: 'now', child: Text('Send now')),
-                                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                    (_) => [
+                                      PopupMenuItem(value: 'now', child: Text(tr('Send now'))),
+                                      PopupMenuItem(value: 'delete', child: Text(tr('Delete'))),
                                     ],
                               ),
                             ),
@@ -229,10 +230,10 @@ Future<DateTime?> pickScheduleTime(BuildContext context) async {
   final now = DateTime.now();
   final tomorrow9 = DateTime(now.year, now.month, now.day + 1, 9);
   final presets = <(String, DateTime)>[
-    ('In 1 hour', now.add(const Duration(hours: 1))),
-    ('In 3 hours', now.add(const Duration(hours: 3))),
-    ('In 8 hours', now.add(const Duration(hours: 8))),
-    ('Tomorrow at 9:00 AM', tomorrow9),
+    (tr('In 1 hour'), now.add(const Duration(hours: 1))),
+    (tr('In 3 hours'), now.add(const Duration(hours: 3))),
+    (tr('In 8 hours'), now.add(const Duration(hours: 8))),
+    (tr('Tomorrow at 9:00 AM'), tomorrow9),
   ];
   final picked = await showModalBottomSheet<Object>(
     context: context,
@@ -244,7 +245,7 @@ Future<DateTime?> pickScheduleTime(BuildContext context) async {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                child: Text('Send later', style: ctx.text.titleLarge),
+                child: Text(tr('Send later'), style: ctx.text.titleLarge),
               ),
               for (final (label, at) in presets)
                 ListTile(
@@ -255,7 +256,7 @@ Future<DateTime?> pickScheduleTime(BuildContext context) async {
                 ),
               ListTile(
                 leading: const Icon(Icons.edit_calendar_rounded, color: AppColors.primary),
-                title: const Text('Pick date & time'),
+                title: Text(tr('Pick date & time')),
                 onTap: () => Navigator.pop(ctx, 'custom'),
               ),
             ],
@@ -270,18 +271,18 @@ Future<DateTime?> pickScheduleTime(BuildContext context) async {
     initialDate: now,
     firstDate: DateTime(now.year, now.month, now.day),
     lastDate: now.add(const Duration(days: 365)),
-    helpText: 'Send on',
+    helpText: tr('Send on'),
   );
   if (date == null || !context.mounted) return null;
   final time = await showTimePicker(
     context: context,
     initialTime: TimeOfDay.fromDateTime(now.add(const Duration(minutes: 5))),
-    helpText: 'Send at',
+    helpText: tr('Send at'),
   );
   if (time == null) return null;
   final at = DateTime(date.year, date.month, date.day, time.hour, time.minute);
   if (!at.isAfter(DateTime.now())) {
-    if (context.mounted) AppFeedback.error(context, 'Pick a time in the future.');
+    if (context.mounted) AppFeedback.error(context, tr('Pick a time in the future.'));
     return null;
   }
   return at;

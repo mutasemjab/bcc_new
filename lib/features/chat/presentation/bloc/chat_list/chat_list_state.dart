@@ -23,7 +23,7 @@ class ChatListState extends Equatable {
 
   /// Display title for any chat (group name or the peer's name).
   String titleOf(ChatEntity chat) {
-    if (chat.isGroup) return chat.name ?? 'Group';
+    if (chat.isGroup) return chat.name ?? tr('Group');
     return users[chat.peerId(uid)]?.name ?? '';
   }
 

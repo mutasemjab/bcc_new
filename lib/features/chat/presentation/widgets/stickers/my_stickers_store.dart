@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -17,10 +18,10 @@ class MyStickersStore {
 
   /// Copies [source] into app storage and puts it first in the list.
   Future<List<File>> add(File source) async {
-    final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/stickers');
+    final dir = Directory(tr('{0}/stickers', [(await getApplicationDocumentsDirectory()).path]));
     if (!dir.existsSync()) dir.createSync(recursive: true);
     final dot = source.path.lastIndexOf('.');
-    final ext = dot < 0 ? '.png' : source.path.substring(dot).toLowerCase();
+    final ext = dot < 0 ? tr('.png') : source.path.substring(dot).toLowerCase();
     final copy = await source.copy('${dir.path}/${const Uuid().v4()}$ext');
     final paths = [copy.path, ...load().map((f) => f.path)].take(maxStickers).toList();
     await _prefs.setStringList(_key, paths);

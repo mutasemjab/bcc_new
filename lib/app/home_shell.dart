@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -73,10 +74,10 @@ class _HomeShellState extends State<HomeShell> {
           setState(() => _index = i);
         },
         items: [
-          _NavItem(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats', badge: unread),
-          const _NavItem(Icons.amp_stories_outlined, Icons.amp_stories_rounded, 'Stories'),
-          _NavItem(Icons.call_outlined, Icons.call_rounded, 'Calls', badge: missed),
-          const _NavItem(Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+          _NavItem(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, tr('Chats'), badge: unread),
+          _NavItem(Icons.amp_stories_outlined, Icons.amp_stories_rounded, tr('Stories')),
+          _NavItem(Icons.call_outlined, Icons.call_rounded, tr('Calls'), badge: missed),
+          _NavItem(Icons.settings_outlined, Icons.settings_rounded, tr('Settings')),
         ],
       ),
     );

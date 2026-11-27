@@ -29,13 +29,16 @@ class _RtcVideoViewState extends State<RtcVideoView> {
     final engine = rtc.engine;
     if (engine == null) return null;
     final uid = widget.remoteUid;
+    // Remote video needs the joined channel; before that, show black (the
+    // view is rebuilt once the channel is known).
+    if (uid != null && rtc.channel == null) return null;
     if (uid == null) {
       return VideoViewController(rtcEngine: engine, canvas: const VideoCanvas(uid: 0));
     }
     return VideoViewController.remote(
       rtcEngine: engine,
       canvas: VideoCanvas(uid: uid),
-      connection: RtcConnection(channelId: rtc.channel),
+      connection: RtcConnection(channelId: rtc.channel!),
     );
   }
 

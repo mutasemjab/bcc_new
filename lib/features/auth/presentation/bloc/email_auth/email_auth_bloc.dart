@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -41,7 +42,10 @@ class EmailAuthBloc extends Bloc<EmailAuthEvent, EmailAuthState> {
     result.match(
       (f) => emit(state.copyWith(status: EmailAuthStatus.failure, message: f.message)),
       (_) => emit(
-        state.copyWith(status: EmailAuthStatus.resetSent, message: 'Password reset link sent to ${e.email.trim()}'),
+        state.copyWith(
+          status: EmailAuthStatus.resetSent,
+          message: tr('Password reset link sent to {0}', [e.email.trim()]),
+        ),
       ),
     );
   }

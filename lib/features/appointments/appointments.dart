@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -32,7 +33,7 @@ class Appointment {
   final Duration? remindBefore;
   final String? chatId;
 
-  int get reminderId => ('appt$id').hashCode & 0x7FFFFFFF;
+  int get reminderId => (tr('appt{0}', [id])).hashCode & 0x7FFFFFFF;
   DateTime? get remindAt => remindBefore == null ? null : at.subtract(remindBefore!);
 }
 
@@ -76,7 +77,7 @@ class AppointmentsStore extends ChangeNotifier {
           ChatNotifications.scheduleReminder(
             id: a.reminderId,
             title: '📅 ${a.title}',
-            body: 'At ${DateFormat.jm().format(a.at)}${a.note.isEmpty ? '' : ' • ${a.note}'}',
+            body: tr('At {0}{1}', [DateFormat.jm().format(a.at), a.note.isEmpty ? '' : ' • ${a.note}']),
             at: at,
           );
         }
@@ -131,11 +132,11 @@ class AppointmentsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = sl<AppointmentsStore>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Appointments')),
+      appBar: AppBar(title: Text(tr('Appointments'))),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showAppointmentEditor(context),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('New'),
+        label: Text(tr('New')),
       ),
       body: ListenableBuilder(
         listenable: store,
@@ -144,18 +145,18 @@ class AppointmentsPage extends StatelessWidget {
           final upcoming = store.items.where((a) => a.at.isAfter(now)).toList();
           final past = store.items.where((a) => !a.at.isAfter(now)).toList().reversed.toList();
           if (store.items.isEmpty) {
-            return const EmptyState(
+            return EmptyState(
               icon: Icons.event_note_rounded,
-              title: 'No appointments',
-              message: 'Save appointments here and get a reminder before they start.',
+              title: tr('No appointments'),
+              message: tr('Save appointments here and get a reminder before they start.'),
             );
           }
           return ListView(
             padding: const EdgeInsets.only(bottom: 96),
             children: [
-              if (upcoming.isNotEmpty) const _Header('Upcoming'),
+              if (upcoming.isNotEmpty) _Header(tr('Upcoming')),
               for (final a in upcoming) _Tile(a),
-              if (past.isNotEmpty) const _Header('Past'),
+              if (past.isNotEmpty) _Header(tr('Past')),
               for (final a in past) _Tile(a, past: true),
             ],
           );
@@ -209,9 +210,9 @@ class _Tile extends StatelessWidget {
           onPressed: () async {
             final ok = await AppFeedback.confirm(
               context,
-              title: 'Delete appointment?',
+              title: tr('Delete appointment?'),
               message: a.title,
-              confirmLabel: 'Delete',
+              confirmLabel: tr('Delete'),
               destructive: true,
             );
             if (ok) await sl<AppointmentsStore>().delete(a);
@@ -238,10 +239,10 @@ class _Header extends StatelessWidget {
 const _reminderOptions = <Duration?>[null, Duration.zero, Duration(minutes: 15), Duration(hours: 1), Duration(days: 1)];
 
 String _reminderLabel(Duration d) {
-  if (d == Duration.zero) return 'At the time';
-  if (d.inDays >= 1) return '${d.inDays} day before';
-  if (d.inHours >= 1) return '${d.inHours} hour before';
-  return '${d.inMinutes} min before';
+  if (d == Duration.zero) return tr('At the time');
+  if (d.inDays >= 1) return tr('{0} day before', [d.inDays]);
+  if (d.inHours >= 1) return tr('{0} hour before', [d.inHours]);
+  return tr('{0} min before', [d.inMinutes]);
 }
 
 /// Create or edit an appointment (also used from "Add to appointments" on a message).
@@ -300,7 +301,7 @@ class _EditorState extends State<_Editor> {
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
-      AppFeedback.error(context, 'Give the appointment a title.');
+      AppFeedback.error(context, tr('Give the appointment a title.'));
       return;
     }
     setState(() => _saving = true);
@@ -313,7 +314,7 @@ class _EditorState extends State<_Editor> {
       chatId: widget.chatId ?? widget.existing?.chatId,
     );
     if (!mounted) return;
-    AppFeedback.info(context, 'Appointment saved');
+    AppFeedback.info(context, tr('Appointment saved'));
     Navigator.pop(context);
   }
 
@@ -325,14 +326,17 @@ class _EditorState extends State<_Editor> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.existing == null ? 'New appointment' : 'Edit appointment', style: context.text.titleLarge),
+          Text(
+            widget.existing == null ? tr('New appointment') : tr('Edit appointment'),
+            style: context.text.titleLarge,
+          ),
           const SizedBox(height: 14),
           TextField(
             controller: _title,
             autofocus: widget.existing == null && widget.initialTitle == null,
             maxLines: 2,
             minLines: 1,
-            decoration: const InputDecoration(hintText: 'Title (e.g. Meeting with Ahmad)'),
+            decoration: InputDecoration(hintText: tr('Title (e.g. Meeting with Ahmad)')),
           ),
           const SizedBox(height: 10),
           Row(
@@ -358,14 +362,14 @@ class _EditorState extends State<_Editor> {
             decoration: const InputDecoration(prefixIcon: Icon(Icons.notifications_active_rounded)),
             items: [
               for (final r in _reminderOptions)
-                DropdownMenuItem(value: r, child: Text(r == null ? 'No reminder' : _reminderLabel(r))),
+                DropdownMenuItem(value: r, child: Text(r == null ? tr('No reminder') : _reminderLabel(r))),
             ],
             onChanged: (v) => setState(() => _remind = v),
           ),
           const SizedBox(height: 10),
-          TextField(controller: _note, decoration: const InputDecoration(hintText: 'Note (optional)')),
+          TextField(controller: _note, decoration: InputDecoration(hintText: tr('Note (optional)'))),
           const SizedBox(height: 18),
-          GradientButton(label: 'Save', icon: Icons.check_rounded, isLoading: _saving, onPressed: _save),
+          GradientButton(label: tr('Save'), icon: Icons.check_rounded, isLoading: _saving, onPressed: _save),
         ],
       ),
     );

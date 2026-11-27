@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -118,10 +119,10 @@ class _StatusViewerPageState extends State<StatusViewerPage> with SingleTickerPr
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Text('Viewed by ${s.viewers.length}', style: Theme.of(ctx).textTheme.titleLarge),
+                  child: Text(tr('Viewed by {0}', [s.viewers.length]), style: Theme.of(ctx).textTheme.titleLarge),
                 ),
                 if (s.viewers.isEmpty)
-                  const Padding(padding: EdgeInsets.all(20), child: Text('No views yet'))
+                  Padding(padding: EdgeInsets.all(20), child: Text(tr('No views yet')))
                 else
                   Flexible(
                     child: ListView(
@@ -130,7 +131,7 @@ class _StatusViewerPageState extends State<StatusViewerPage> with SingleTickerPr
                         for (final v in s.viewers)
                           ListTile(
                             leading: AppAvatar(name: users[v]?.name ?? '?', imageUrl: users[v]?.photoUrl, size: 40),
-                            title: Text(users[v]?.name ?? 'Someone'),
+                            title: Text(users[v]?.name ?? tr('Someone')),
                           ),
                       ],
                     ),
@@ -147,9 +148,9 @@ class _StatusViewerPageState extends State<StatusViewerPage> with SingleTickerPr
     _progress.stop();
     final ok = await AppFeedback.confirm(
       context,
-      title: 'Delete story?',
-      message: 'It will be removed for everyone.',
-      confirmLabel: 'Delete',
+      title: tr('Delete story?'),
+      message: tr('It will be removed for everyone.'),
+      confirmLabel: tr('Delete'),
       destructive: true,
     );
     if (!mounted) return;
@@ -169,7 +170,7 @@ class _StatusViewerPageState extends State<StatusViewerPage> with SingleTickerPr
     final users = context.select((ChatListBloc b) => b.state.users);
     final isMine = group.userId == _me;
     final user = users[group.userId];
-    final name = isMine ? 'My story' : (user?.name ?? '');
+    final name = isMine ? tr('My story') : (user?.name ?? '');
     final width = MediaQuery.sizeOf(context).width;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(

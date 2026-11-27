@@ -258,7 +258,8 @@ class ChatRemoteDataSource {
     try {
       final msg = (await ref.get()).data() ?? const {};
       final chat = (await _chats.doc(chatId).get()).data() ?? const {};
-      final recipients = List<String>.from(chat['participants'] as List<dynamic>? ?? const [])..remove(msg['senderId']);
+      // Everyone in the chat (sender included) gets one view; delete after the last.
+      final recipients = List<String>.from(chat['participants'] as List<dynamic>? ?? const []);
       final opened = List<String>.from(msg['openedBy'] as List<dynamic>? ?? const []);
       final url = msg['mediaUrl'] as String?;
       if (url != null && recipients.every(opened.contains)) await _storage.deleteByUrl(url);

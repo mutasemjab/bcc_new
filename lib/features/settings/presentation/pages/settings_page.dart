@@ -1,4 +1,7 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
+
+import '../../../../app/di.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,7 +38,7 @@ class SettingsPage extends StatelessWidget {
           backgroundColor: context.theme.scaffoldBackgroundColor,
           flexibleSpace: FlexibleSpaceBar(
             titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 14),
-            title: Text('Settings', style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            title: Text(tr('Settings'), style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
           ),
         ),
         SliverToBoxAdapter(
@@ -91,7 +94,7 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
         ),
-        _section(context, 'Appearance', [
+        _section(context, tr('Appearance'), [
           Padding(
             padding: const EdgeInsets.all(14),
             child: SegmentedButton<ThemeMode>(
@@ -101,26 +104,26 @@ class SettingsPage extends StatelessWidget {
                 selectedForegroundColor: Colors.white,
                 side: BorderSide(color: context.palette.stroke),
               ),
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: ThemeMode.system,
                   icon: Icon(Icons.brightness_auto_rounded),
-                  label: Text('System'),
+                  label: Text(tr('System')),
                 ),
-                ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded), label: Text('Light')),
-                ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded), label: Text('Dark')),
+                ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded), label: Text(tr('Light'))),
+                ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded), label: Text(tr('Dark'))),
               ],
               selected: {mode},
               onSelectionChanged: (s) => context.read<ThemeCubit>().setMode(s.first),
             ),
           ),
         ]),
-        _section(context, 'Account', [
+        _section(context, tr('Account'), [
           _tile(
             context,
             Icons.phone_rounded,
-            'Phone',
-            subtitle: user.phone ?? 'Add your number so friends can find you',
+            tr('Phone'),
+            subtitle: user.phone ?? tr('Add your number so friends can find you'),
             color: AppColors.online,
             onTap:
                 () => Navigator.of(
@@ -128,36 +131,48 @@ class SettingsPage extends StatelessWidget {
                 ).push(MaterialPageRoute<void>(builder: (_) => LinkPhonePage(current: user.phone))),
           ),
           if (user.email != null)
-            _tile(context, Icons.alternate_email_rounded, 'Email', subtitle: user.email, color: AppColors.primary),
+            _tile(context, Icons.alternate_email_rounded, tr('Email'), subtitle: user.email, color: AppColors.primary),
           _tile(
             context,
             Icons.person_rounded,
-            'Edit profile',
+            tr('Edit profile'),
             color: AppColors.violet,
             onTap: () => context.push(AppRoutes.editProfile),
           ),
         ]),
-        _section(context, 'Chats', [
+        _section(context, tr('Chats'), [
           _tile(
             context,
             Icons.wallpaper_rounded,
-            'Chat wallpaper',
-            subtitle: 'Default background for all chats',
+            tr('Chat wallpaper'),
+            subtitle: tr('Default background for all chats'),
             color: AppColors.primary,
             onTap: () => context.push(AppRoutes.wallpaper),
           ),
           _tile(
             context,
+            Icons.language_rounded,
+            tr('Language'),
+            subtitle: switch (sl<L10n>().language) {
+              AppLanguage.system => tr('Phone language'),
+              AppLanguage.ar => 'العربية',
+              AppLanguage.en => 'English',
+            },
+            color: AppColors.primary,
+            onTap: () => _pickLanguage(context),
+          ),
+          _tile(
+            context,
             Icons.font_download_rounded,
-            'Font',
-            subtitle: 'Font style and text size',
+            tr('Font'),
+            subtitle: tr('Font style and text size'),
             color: AppColors.primary,
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FontPage())),
           ),
           _tile(
             context,
             Icons.star_rounded,
-            'Starred messages',
+            tr('Starred messages'),
             color: AppColors.warning,
             onTap:
                 () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StarredMessagesPage())),
@@ -165,36 +180,36 @@ class SettingsPage extends StatelessWidget {
           _tile(
             context,
             Icons.event_note_rounded,
-            'Appointments',
-            subtitle: 'Saved appointments and reminders',
+            tr('Appointments'),
+            subtitle: tr('Saved appointments and reminders'),
             color: AppColors.online,
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AppointmentsPage())),
           ),
         ]),
-        _section(context, 'Help', [
+        _section(context, tr('Help'), [
           _tile(
             context,
             Icons.support_agent_rounded,
-            'Help & support',
-            subtitle: 'Contact us • Company info',
+            tr('Help & support'),
+            subtitle: tr('Contact us • Company info'),
             color: AppColors.primary,
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SupportPage())),
           ),
         ]),
-        _section(context, 'Privacy & security', [
+        _section(context, tr('Privacy & security'), [
           _tile(
             context,
             Icons.lock_rounded,
-            'Privacy',
-            subtitle: 'Last seen, online, read receipts, blocked contacts',
+            tr('Privacy'),
+            subtitle: tr('Last seen, online, read receipts, blocked contacts'),
             color: AppColors.primary,
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacyPage())),
           ),
           _tile(
             context,
             Icons.shield_rounded,
-            'Private & secure',
-            subtitle: 'Only the members of a chat can read its messages.',
+            tr('Private & secure'),
+            subtitle: tr('Only the members of a chat can read its messages.'),
             color: AppColors.accent,
           ),
         ]),
@@ -202,15 +217,15 @@ class SettingsPage extends StatelessWidget {
           _tile(
             context,
             Icons.logout_rounded,
-            'Sign out',
+            tr('Sign out'),
             color: AppColors.danger,
             danger: true,
             onTap: () async {
               final ok = await AppFeedback.confirm(
                 context,
-                title: 'Sign out?',
-                message: 'You can sign back in any time.',
-                confirmLabel: 'Sign out',
+                title: tr('Sign out?'),
+                message: tr('You can sign back in any time.'),
+                confirmLabel: tr('Sign out'),
                 destructive: true,
               );
               if (ok && context.mounted) context.read<SessionBloc>().add(const SessionSignOutRequested());
@@ -224,13 +239,39 @@ class SettingsPage extends StatelessWidget {
               children: [
                 const BrandLogo(size: 40),
                 const SizedBox(height: 10),
-                Text('BCC Chat • v1.0.0', style: context.text.labelSmall),
+                Text(tr('BCC Chat • v1.0.0'), style: context.text.labelSmall),
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _pickLanguage(BuildContext context) async {
+    final l10n = sl<L10n>();
+    final choice = await showModalBottomSheet<AppLanguage>(
+      context: context,
+      builder:
+          (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (lang, label) in [
+                  (AppLanguage.system, tr('Phone language')),
+                  (AppLanguage.ar, 'العربية'),
+                  (AppLanguage.en, 'English'),
+                ])
+                  ListTile(
+                    title: Text(label),
+                    trailing: l10n.language == lang ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
+                    onTap: () => Navigator.pop(ctx, lang),
+                  ),
+              ],
+            ),
+          ),
+    );
+    if (choice != null) await l10n.setLanguage(choice);
   }
 
   Widget _section(BuildContext context, String title, List<Widget> children) => SliverToBoxAdapter(

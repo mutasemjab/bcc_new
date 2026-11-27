@@ -34,7 +34,11 @@ abstract final class AppColors {
   static const online = Color(0xFF22C55E);
   static const danger = Color(0xFFFF4D6D);
   static const warning = Color(0xFFFFB020);
-  static const readTick = logoBlueLight;
+
+  /// "Read" ticks: dark navy so they stand out on the blue outgoing bubble
+  /// (white = sent/delivered); light blue on dark overlays.
+  static const readTick = Color(0xFF0B2E6B);
+  static const readTickOnDark = Color(0xFF6FD3FF);
 
   // Dark surfaces (neutral charcoal, like the logo's "C")
   static const darkBackground = Color(0xFF0E0F11);

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -62,12 +63,12 @@ class _WallpaperPageState extends State<WallpaperPage> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.chat_rounded),
-                    title: const Text('For this chat'),
+                    title: Text(tr('For this chat')),
                     onTap: () => Navigator.pop(ctx, 'chat'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.forum_rounded),
-                    title: const Text('For all chats'),
+                    title: Text(tr('For all chats')),
                     onTap: () => Navigator.pop(ctx, 'all'),
                   ),
                 ],
@@ -80,7 +81,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
     }
     await _store.set(_selected, chatId: target);
     if (!mounted) return;
-    AppFeedback.info(context, 'Wallpaper set');
+    AppFeedback.info(context, tr('Wallpaper set'));
     Navigator.of(context).pop();
   }
 
@@ -89,7 +90,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
     final hasOverride = widget.chatId != null && _store.hasOverride(widget.chatId!);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat wallpaper'),
+        title: Text(tr('Chat wallpaper')),
         actions: [
           if (hasOverride)
             TextButton(
@@ -97,7 +98,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
                 await _store.clearOverride(widget.chatId!);
                 if (context.mounted) Navigator.of(context).pop();
               },
-              child: const Text('Reset'),
+              child: Text(tr('Reset')),
             ),
         ],
       ),
@@ -115,13 +116,13 @@ class _WallpaperPageState extends State<WallpaperPage> {
               ),
               child: ChatWallpaper(
                 preview: _selected,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.all(14),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      _PreviewBubble(text: 'Hey! How do I look? 😄', mine: false),
-                      _PreviewBubble(text: 'Looking great 👌', mine: true),
+                      _PreviewBubble(text: tr('Hey! How do I look? 😄'), mine: false),
+                      _PreviewBubble(text: tr('Looking great 👌'), mine: true),
                     ],
                   ),
                 ),
@@ -141,7 +142,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
                 _Swatch(
                   selected: _selected.kind == WallpaperKind.pattern,
                   onTap: () => setState(() => _selected = const Wallpaper.pattern()),
-                  child: const ChatWallpaper(preview: Wallpaper.pattern(), child: Center(child: Text('Default'))),
+                  child: ChatWallpaper(preview: Wallpaper.pattern(), child: Center(child: Text(tr('Default')))),
                 ),
                 _Swatch(
                   selected: _selected.kind == WallpaperKind.image,
@@ -167,7 +168,7 @@ class _WallpaperPageState extends State<WallpaperPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: GradientButton(label: 'Set wallpaper', icon: Icons.wallpaper_rounded, onPressed: _apply),
+              child: GradientButton(label: tr('Set wallpaper'), icon: Icons.wallpaper_rounded, onPressed: _apply),
             ),
           ),
         ],

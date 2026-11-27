@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -54,7 +55,7 @@ class PollContent extends StatelessWidget {
               Icon(Icons.poll_rounded, size: 18, color: muted),
               const SizedBox(width: 6),
               Text(
-                poll.allowMultiple ? 'Poll • select one or more' : 'Poll • select one',
+                poll.allowMultiple ? tr('Poll • select one or more') : tr('Poll • select one'),
                 style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ],
@@ -81,7 +82,7 @@ class PollContent extends StatelessWidget {
               onPressed: voters == 0 ? null : () => _showVotes(context, poll, counts),
               style: TextButton.styleFrom(foregroundColor: fg, visualDensity: VisualDensity.compact),
               child: Text(
-                voters == 0 ? 'No votes yet' : 'View votes ($voters)',
+                voters == 0 ? tr('No votes yet') : tr('View votes ({0})', [voters]),
                 style: TextStyle(color: voters == 0 ? muted : fg, fontWeight: FontWeight.w700),
               ),
             ),
@@ -114,7 +115,7 @@ class PollContent extends StatelessWidget {
                           children: [
                             Expanded(child: Text(o.text, style: ctx.text.titleSmall)),
                             Text(
-                              '${counts[o.id] ?? 0} vote${(counts[o.id] ?? 0) == 1 ? '' : 's'}',
+                              tr('{0} vote{1}', [counts[o.id] ?? 0, (counts[o.id] ?? 0) == 1 ? '' : 's']),
                               style: TextStyle(color: ctx.palette.textSecondary, fontSize: 13),
                             ),
                           ],
@@ -125,7 +126,7 @@ class PollContent extends StatelessWidget {
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           leading: AppAvatar(name: nameOf(e.key), size: 34),
-                          title: Text(e.key == myId ? 'You' : nameOf(e.key)),
+                          title: Text(e.key == myId ? tr('You') : nameOf(e.key)),
                         ),
                       Divider(color: ctx.palette.stroke),
                     ],

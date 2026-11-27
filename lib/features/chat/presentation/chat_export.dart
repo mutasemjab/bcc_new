@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -23,14 +24,14 @@ Future<void> exportChat(BuildContext context, ConversationState state) async {
             children: [
               ListTile(
                 leading: const Icon(Icons.text_snippet_rounded),
-                title: const Text('Without media'),
-                subtitle: const Text('Text messages only'),
+                title: Text(tr('Without media')),
+                subtitle: Text(tr('Text messages only')),
                 onTap: () => Navigator.pop(ctx, false),
               ),
               ListTile(
                 leading: const Icon(Icons.perm_media_rounded),
-                title: const Text('Include media links'),
-                subtitle: const Text('Photos, videos and files as download links'),
+                title: Text(tr('Include media links')),
+                subtitle: Text(tr('Photos, videos and files as download links')),
                 onTap: () => Navigator.pop(ctx, true),
               ),
             ],
@@ -39,7 +40,7 @@ Future<void> exportChat(BuildContext context, ConversationState state) async {
   );
   if (withMedia == null || !context.mounted) return;
 
-  AppFeedback.info(context, 'Preparing export…');
+  AppFeedback.info(context, tr('Preparing export…'));
   final r = await sl<ChatTools>().fullHistory(state.chatId);
   if (!context.mounted) return;
   final all = r.fold((f) {
@@ -59,8 +60,8 @@ Future<void> exportChat(BuildContext context, ConversationState state) async {
   final fmt = DateFormat('yyyy-MM-dd HH:mm');
   final buf =
       StringBuffer()
-        ..writeln('BCC Chat — ${state.title}')
-        ..writeln('Exported ${fmt.format(DateTime.now())} • ${visible.length} messages')
+        ..writeln(tr('BCC Chat — {0}', [state.title]))
+        ..writeln(tr('Exported {0} • {1} messages', [fmt.format(DateTime.now()), visible.length]))
         ..writeln();
   for (final m in visible) {
     final when = m.createdAt == null ? '' : fmt.format(m.createdAt!);
@@ -71,7 +72,7 @@ Future<void> exportChat(BuildContext context, ConversationState state) async {
     final who = state.nameOf(m.senderId);
     final body = StringBuffer(m.preview);
     if (withMedia && !m.viewOnce && m.mediaUrl != null) body.write('  ${m.mediaUrl}');
-    if (m.type == MessageType.text && m.isForwarded) body.write('  (forwarded)');
+    if (m.type == MessageType.text && m.isForwarded) body.write(tr('  (forwarded)'));
     buf.writeln('[$when] $who: $body');
   }
 

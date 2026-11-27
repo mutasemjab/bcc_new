@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,7 @@ import '../../../calls/domain/entities/call_entity.dart';
 import '../../../calls/presentation/call_launcher.dart';
 import '../../../chat/domain/entities/chat_entity.dart';
 import '../../../chat/presentation/chat_actions.dart';
+import '../../../chat/presentation/pages/media_viewer_page.dart';
 import '../block_list.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/user_usecases.dart';
@@ -54,7 +56,17 @@ class UserProfilePage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      AppAvatar(name: user.name, imageUrl: user.photoUrl, size: 130, heroTag: 'avatar-$chatId'),
+                      // Tap → full-size photo.
+                      GestureDetector(
+                        onTap:
+                            user.photoUrl == null
+                                ? null
+                                : () => MediaViewerPage.open(context, url: user.photoUrl!, heroTag: 'photo-$chatId'),
+                        child: Hero(
+                          tag: 'photo-$chatId',
+                          child: AppAvatar(name: user.name, imageUrl: user.photoUrl, size: 130),
+                        ),
+                      ),
                       const SizedBox(height: 18),
                       Text(user.name, style: context.text.headlineSmall),
                       const SizedBox(height: 6),
@@ -68,7 +80,7 @@ class UserProfilePage extends StatelessWidget {
                                   ? ''
                                   : Formatters.lastSeen(user.lastSeen);
                           return Text(
-                            online ? 'online' : seen,
+                            online ? tr('online') : seen,
                             style: TextStyle(color: online ? AppColors.online : context.palette.textSecondary),
                           );
                         },
@@ -82,13 +94,13 @@ class UserProfilePage extends StatelessWidget {
                     children: [
                       _Action(
                         icon: Icons.chat_bubble_rounded,
-                        label: 'Message',
+                        label: tr('Message'),
                         onTap: () => context.push(AppRoutes.conversation(chatId)),
                       ),
                       const SizedBox(width: 12),
                       _Action(
                         icon: Icons.call_rounded,
-                        label: 'Voice',
+                        label: tr('Voice'),
                         onTap:
                             () => CallLauncher.start(
                               context,
@@ -100,7 +112,7 @@ class UserProfilePage extends StatelessWidget {
                       const SizedBox(width: 12),
                       _Action(
                         icon: Icons.videocam_rounded,
-                        label: 'Video',
+                        label: tr('Video'),
                         onTap:
                             () => CallLauncher.start(
                               context,
@@ -115,10 +127,10 @@ class UserProfilePage extends StatelessWidget {
                 const SizedBox(height: 16),
                 _InfoCard(
                   children: [
-                    _InfoRow(icon: Icons.info_outline_rounded, label: 'About', value: user.about),
-                    if (user.phone != null) _InfoRow(icon: Icons.phone_rounded, label: 'Phone', value: user.phone!),
+                    _InfoRow(icon: Icons.info_outline_rounded, label: tr('About'), value: user.about),
+                    if (user.phone != null) _InfoRow(icon: Icons.phone_rounded, label: tr('Phone'), value: user.phone!),
                     if (user.email != null)
-                      _InfoRow(icon: Icons.alternate_email_rounded, label: 'Email', value: user.email!),
+                      _InfoRow(icon: Icons.alternate_email_rounded, label: tr('Email'), value: user.email!),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -126,20 +138,20 @@ class UserProfilePage extends StatelessWidget {
                   children: [
                     ListTile(
                       leading: const Icon(Icons.perm_media_rounded, color: AppColors.primary),
-                      title: const Text('Media, links and docs'),
+                      title: Text(tr('Media, links and docs')),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push(AppRoutes.chatMedia(chatId)),
                     ),
                     ListTile(
                       leading: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary),
-                      title: const Text('Clear chat'),
+                      title: Text(tr('Clear chat')),
                       onTap: () => ChatActions.clearChat(context, chatId, me),
                     ),
                     ListTile(
                       leading: const Icon(Icons.wallpaper_rounded, color: AppColors.primary),
-                      title: const Text('Chat wallpaper'),
+                      title: Text(tr('Chat wallpaper')),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.push('${AppRoutes.wallpaper}?chatId=$chatId'),
+                      onTap: () => context.push(tr('{0}?chatId={1}', [AppRoutes.wallpaper, chatId])),
                     ),
                   ],
                 ),
@@ -156,7 +168,7 @@ class UserProfilePage extends StatelessWidget {
                             color: AppColors.danger,
                           ),
                           title: Text(
-                            blocked ? 'Unblock ${user.name}' : 'Block ${user.name}',
+                            blocked ? tr('Unblock {0}', [user.name]) : tr('Block {0}', [user.name]),
                             style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
                           ),
                           onTap: () => ChatActions.toggleBlock(context, user.id, user.name),
@@ -165,8 +177,8 @@ class UserProfilePage extends StatelessWidget {
                     ),
                     ListTile(
                       leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
-                      title: const Text(
-                        'Delete chat',
+                      title: Text(
+                        tr('Delete chat'),
                         style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
                       ),
                       onTap: () => ChatActions.deleteChat(context, chatId, me),

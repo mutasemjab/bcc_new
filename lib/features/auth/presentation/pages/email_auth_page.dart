@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -40,7 +41,7 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
   void _submit(EmailAuthState state) {
     FocusScope.of(context).unfocus();
     if (state.isSignUp && _password.text != _confirm.text) {
-      AppFeedback.error(context, 'Passwords do not match.');
+      AppFeedback.error(context, tr('Passwords do not match.'));
       return;
     }
     context.read<EmailAuthBloc>().add(EmailAuthSubmitted(_email.text, _password.text));
@@ -72,14 +73,14 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          state.isSignUp ? 'Create your\naccount' : 'Welcome\nback',
+                          state.isSignUp ? tr('Create your\naccount') : tr('Welcome\nback'),
                           style: context.text.displaySmall?.copyWith(fontSize: 36, height: 1.1),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           state.isSignUp
-                              ? 'Join BCC Chat with your email address.'
-                              : 'Sign in to pick up where you left off.',
+                              ? tr('Join BCC Chat with your email address.')
+                              : tr('Sign in to pick up where you left off.'),
                           style: context.text.bodyLarge?.copyWith(color: context.palette.textSecondary),
                         ),
                       ],
@@ -95,8 +96,8 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                             keyboardType: TextInputType.emailAddress,
                             autofillHints: const [AutofillHints.email],
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              hintText: 'Email address',
+                            decoration: InputDecoration(
+                              hintText: tr('Email address'),
                               prefixIcon: Icon(Icons.alternate_email_rounded),
                             ),
                           ),
@@ -108,7 +109,7 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                             textInputAction: state.isSignUp ? TextInputAction.next : TextInputAction.done,
                             onSubmitted: state.isSignUp ? null : (_) => _submit(state),
                             decoration: InputDecoration(
-                              hintText: 'Password',
+                              hintText: tr('Password'),
                               prefixIcon: const Icon(Icons.lock_outline_rounded),
                               suffixIcon: IconButton(
                                 onPressed: () => setState(() => _obscure = !_obscure),
@@ -128,8 +129,8 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                                         obscureText: _obscure,
                                         textInputAction: TextInputAction.done,
                                         onSubmitted: (_) => _submit(state),
-                                        decoration: const InputDecoration(
-                                          hintText: 'Confirm password',
+                                        decoration: InputDecoration(
+                                          hintText: tr('Confirm password'),
                                           prefixIcon: Icon(Icons.lock_reset_rounded),
                                         ),
                                       ),
@@ -144,13 +145,13 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                                     state.isLoading
                                         ? null
                                         : () => context.read<EmailAuthBloc>().add(PasswordResetRequested(_email.text)),
-                                child: const Text('Forgot password?'),
+                                child: Text(tr('Forgot password?')),
                               ),
                             )
                           else
                             const SizedBox(height: 20),
                           GradientButton(
-                            label: state.isSignUp ? 'Create account' : 'Sign in',
+                            label: state.isSignUp ? tr('Create account') : tr('Sign in'),
                             isLoading: state.isLoading,
                             onPressed: () => _submit(state),
                           ),
@@ -163,12 +164,12 @@ class _EmailAuthViewState extends State<_EmailAuthView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        state.isSignUp ? 'Already have an account?' : 'New to BCC Chat?',
+                        state.isSignUp ? tr('Already have an account?') : tr('New to BCC Chat?'),
                         style: TextStyle(color: context.palette.textSecondary),
                       ),
                       TextButton(
                         onPressed: () => context.read<EmailAuthBloc>().add(const EmailAuthModeToggled()),
-                        child: Text(state.isSignUp ? 'Sign in' : 'Create account'),
+                        child: Text(state.isSignUp ? tr('Sign in') : tr('Create account')),
                       ),
                     ],
                   ),

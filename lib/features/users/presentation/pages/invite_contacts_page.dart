@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,7 +18,7 @@ class InviteContactsPage extends StatefulWidget {
   final String? myPhone;
 
   static String inviteText() =>
-      "Let's chat on ${Env.appName}! It's fast and private. Download it here: ${Env.downloadUrl}";
+      tr('Let\'s chat on {0}! It\'s fast and private. Download it here: {1}', [Env.appName, Env.downloadUrl]);
 
   @override
   State<InviteContactsPage> createState() => _InviteContactsPageState();
@@ -37,7 +38,7 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
   Future<void> _load() async {
     final service = sl<ContactsService>();
     if (await service.requestAccess() != ContactsAccess.granted) {
-      if (mounted) setState(() => _error = 'Allow access to your contacts to invite friends.');
+      if (mounted) setState(() => _error = tr('Allow access to your contacts to invite friends.'));
       return;
     }
     final book = await service.readContacts(defaultCountryCode: PhoneNumbers.countryCodeOf(widget.myPhone));
@@ -60,13 +61,13 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.sms_rounded, color: AppColors.primary),
-                  title: Text('Send SMS to ${c.name}'),
+                  title: Text(tr('Send SMS to {0}', [c.name])),
                   subtitle: Text(phone),
                   onTap: () => Navigator.pop(ctx, 'sms'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.share_rounded, color: AppColors.primary),
-                  title: const Text('Share with another app'),
+                  title: Text(tr('Share with another app')),
                   onTap: () => Navigator.pop(ctx, 'share'),
                 ),
               ],
@@ -90,10 +91,10 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
             .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invite to BCC Chat'),
+        title: Text(tr('Invite to BCC Chat')),
         actions: [
           IconButton(
-            tooltip: 'Share invite link',
+            tooltip: tr('Share invite link'),
             icon: const Icon(Icons.share_rounded),
             onPressed: () => SharePlus.instance.share(ShareParams(text: InviteContactsPage.inviteText())),
           ),
@@ -101,7 +102,7 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
       ),
       body:
           _error != null
-              ? EmptyState(icon: Icons.contacts_rounded, title: 'Contacts needed', message: _error!)
+              ? EmptyState(icon: Icons.contacts_rounded, title: tr('Contacts needed'), message: _error!)
               : _contacts == null
               ? const Center(child: CircularProgressIndicator())
               : Column(
@@ -110,8 +111,8 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                     child: TextField(
                       onChanged: (v) => setState(() => _query = v),
-                      decoration: const InputDecoration(
-                        hintText: 'Search contacts',
+                      decoration: InputDecoration(
+                        hintText: tr('Search contacts'),
                         prefixIcon: Icon(Icons.search_rounded),
                       ),
                     ),
@@ -125,7 +126,7 @@ class _InviteContactsPageState extends State<InviteContactsPage> {
                           leading: AppAvatar(name: c.name, size: 42),
                           title: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                           subtitle: Text(c.phones.first),
-                          trailing: TextButton(onPressed: () => _invite(c), child: const Text('Invite')),
+                          trailing: TextButton(onPressed: () => _invite(c), child: Text(tr('Invite'))),
                           onTap: () => _invite(c),
                         );
                       },

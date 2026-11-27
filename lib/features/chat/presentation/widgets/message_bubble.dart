@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -18,9 +19,12 @@ import 'content/poll_content.dart';
 import 'stickers/sticker_catalog.dart';
 
 class DeliveryTicks extends StatelessWidget {
-  const DeliveryTicks({super.key, required this.status, this.color, this.size = 16});
+  const DeliveryTicks({super.key, required this.status, this.color, this.readColor, this.size = 16});
   final DeliveryStatus status;
   final Color? color;
+
+  /// Colour of the "read" double tick — must stand out from [color].
+  final Color? readColor;
   final double size;
 
   @override
@@ -30,7 +34,7 @@ class DeliveryTicks extends StatelessWidget {
       DeliveryStatus.pending => (Icons.schedule_rounded, base),
       DeliveryStatus.sent => (Icons.done_rounded, base),
       DeliveryStatus.delivered => (Icons.done_all_rounded, base),
-      DeliveryStatus.read => (Icons.done_all_rounded, AppColors.readTick),
+      DeliveryStatus.read => (Icons.done_all_rounded, readColor ?? AppColors.readTick),
     };
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
@@ -312,7 +316,7 @@ class _BubbleBody extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                message.isFrequentlyForwarded ? 'Forwarded many times' : 'Forwarded',
+                message.isFrequentlyForwarded ? tr('Forwarded many times') : tr('Forwarded'),
                 style: TextStyle(color: fg.withValues(alpha: 0.65), fontSize: 12, fontStyle: FontStyle.italic),
               ),
             ],
@@ -360,7 +364,13 @@ class _BubbleBody extends StatelessWidget {
               color: palette.incomingBubble.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: _Meta(message: message, isMine: isMine, participants: participants, color: palette.textSecondary),
+            child: _Meta(
+              message: message,
+              isMine: isMine,
+              participants: participants,
+              color: palette.textSecondary,
+              readColor: AppColors.primary,
+            ),
           ),
         ],
       );
@@ -398,7 +408,7 @@ class _BubbleBody extends StatelessWidget {
                 child: Icon(Icons.block_rounded, size: 15, color: fg.withValues(alpha: 0.6)),
               ),
               TextSpan(
-                text: '  This message was deleted',
+                text: tr('  This message was deleted'),
                 style: TextStyle(color: fg.withValues(alpha: 0.7), fontStyle: FontStyle.italic),
               ),
             ],
@@ -461,7 +471,13 @@ class _BubbleBody extends StatelessWidget {
                         color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: _Meta(message: message, isMine: isMine, participants: participants, color: Colors.white),
+                      child: _Meta(
+                        message: message,
+                        isMine: isMine,
+                        participants: participants,
+                        color: Colors.white,
+                        readColor: AppColors.readTickOnDark,
+                      ),
                     ),
                   ),
               ],
@@ -521,7 +537,14 @@ class _TextWithMeta extends StatelessWidget {
 }
 
 class _Meta extends StatelessWidget {
-  const _Meta({required this.message, required this.isMine, required this.participants, required this.color});
+  const _Meta({
+    required this.message,
+    required this.isMine,
+    required this.participants,
+    required this.color,
+    this.readColor = AppColors.readTick,
+  });
+  final Color readColor;
   final MessageEntity message;
   final bool isMine;
   final List<String> participants;
@@ -540,11 +563,11 @@ class _Meta extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (message.isEdited && !message.deletedForEveryone)
-          Text('edited  ', style: TextStyle(color: color, fontSize: 10.5, fontStyle: FontStyle.italic)),
+          Text(tr('edited  '), style: TextStyle(color: color, fontSize: 10.5, fontStyle: FontStyle.italic)),
         Text(Formatters.messageTime(message.createdAt), style: TextStyle(color: color, fontSize: 10.5)),
         if (isMine && !message.deletedForEveryone) ...[
           const SizedBox(width: 3),
-          DeliveryTicks(status: _status(context), color: color, size: 15),
+          DeliveryTicks(status: _status(context), color: color, readColor: readColor, size: 15),
         ],
       ],
     );
@@ -844,9 +867,11 @@ class _ViewOnceContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAudio = message.type == MessageType.audio;
-    final label = isAudio ? 'Voice message' : 'Photo';
-    final opened = isMine ? message.openedBy.isNotEmpty : message.openedByUser(myId);
-    final canOpen = !isMine && !opened && message.mediaUrl != null;
+    final label = isAudio ? tr('Voice message') : tr('Photo');
+    // Everyone — the sender too — can open it exactly once.
+    final opened = message.openedByUser(myId);
+    final canOpen = !opened && message.mediaUrl != null;
+    final seenByOthers = isMine && message.openedBy.any((u) => u != myId);
 
     return InkWell(
       onTap: canOpen ? onOpen : null,
@@ -877,7 +902,7 @@ class _ViewOnceContent extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    opened ? 'Opened' : label,
+                    opened ? tr('Opened') : label,
                     style: TextStyle(
                       color: fg.withValues(alpha: opened ? 0.6 : 1),
                       fontWeight: FontWeight.w600,
@@ -885,7 +910,12 @@ class _ViewOnceContent extends StatelessWidget {
                     ),
                   ),
                   if (canOpen)
-                    Text('Tap to open — view once', style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 11.5)),
+                    Text(
+                      tr('Tap to open — view once'),
+                      style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 11.5),
+                    ),
+                  if (seenByOthers)
+                    Text(tr('Seen'), style: TextStyle(color: fg.withValues(alpha: 0.6), fontSize: 11.5)),
                 ],
               ),
             ),
@@ -912,13 +942,13 @@ class _ModerationStrip extends StatelessWidget {
     if (message.rejected) {
       return Padding(
         padding: const EdgeInsets.only(top: 4),
-        child: Text('🚫 Not approved by an admin — only you can see this', style: secondary),
+        child: Text(tr('🚫 Not approved by an admin — only you can see this'), style: secondary),
       );
     }
     if (isMine || onReview == null) {
       return Padding(
         padding: const EdgeInsets.only(top: 4),
-        child: Text('⏳ Waiting for an admin to approve', style: secondary),
+        child: Text(tr('⏳ Waiting for an admin to approve'), style: secondary),
       );
     }
     return Container(
@@ -928,13 +958,13 @@ class _ModerationStrip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(child: Text('Anonymous member — share with the group?', style: secondary)),
+          Flexible(child: Text(tr('Anonymous member — share with the group?'), style: secondary)),
           TextButton(
             onPressed: () => onReview!(false),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-            child: const Text('Reject'),
+            child: Text(tr('Reject')),
           ),
-          FilledButton(onPressed: () => onReview!(true), child: const Text('Approve')),
+          FilledButton(onPressed: () => onReview!(true), child: Text(tr('Approve'))),
         ],
       ),
     );

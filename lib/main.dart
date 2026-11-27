@@ -2,9 +2,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/app.dart';
 import 'app/di.dart';
+import 'core/l10n/l10n.dart';
 import 'core/services/fresh_install_guard.dart';
 import 'core/services/push_service.dart';
 import 'firebase_options.dart';
@@ -24,7 +26,9 @@ Future<void> main() async {
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent, systemNavigationBarColor: Colors.transparent),
   );
 
+  await initializeDateFormatting(); // Arabic + English date names
   await configureDependencies();
+  sl<L10n>(); // apply the saved language before the first screen
   runApp(const BccChatApp());
 }
 

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/error/failures.dart';
@@ -13,7 +14,7 @@ class EmailCredentials {
 }
 
 Failure? _validateEmail(String email) =>
-    _emailRegex.hasMatch(email.trim()) ? null : const ValidationFailure('Enter a valid email address.');
+    _emailRegex.hasMatch(email.trim()) ? null : ValidationFailure(tr('Enter a valid email address.'));
 
 class WatchAuthState extends StreamUseCase<String?, NoParams> {
   const WatchAuthState(this._repo);
@@ -29,7 +30,7 @@ class SignInWithEmail extends UseCase<void, EmailCredentials> {
   ResultFuture<void> call(EmailCredentials p) async {
     final invalid = _validateEmail(p.email);
     if (invalid != null) return Left(invalid);
-    if (p.password.isEmpty) return const Left(ValidationFailure('Enter your password.'));
+    if (p.password.isEmpty) return Left(ValidationFailure(tr('Enter your password.')));
     return _repo.signInWithEmail(p.email.trim(), p.password);
   }
 }
@@ -42,7 +43,7 @@ class SignUpWithEmail extends UseCase<void, EmailCredentials> {
     final invalid = _validateEmail(p.email);
     if (invalid != null) return Left(invalid);
     if (p.password.length < 6) {
-      return const Left(ValidationFailure('Password must be at least 6 characters.'));
+      return Left(ValidationFailure(tr('Password must be at least 6 characters.')));
     }
     return _repo.signUpWithEmail(p.email.trim(), p.password);
   }
@@ -72,7 +73,7 @@ class SendPhoneCode extends UseCase<PhoneCodeResult, SendPhoneCodeParams> {
   ResultFuture<PhoneCodeResult> call(SendPhoneCodeParams p) async {
     final phone = p.phoneNumber.replaceAll(RegExp(r'[\s-]'), '');
     if (!RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(phone)) {
-      return const Left(ValidationFailure('Enter a valid phone number.'));
+      return Left(ValidationFailure(tr('Enter a valid phone number.')));
     }
     return _repo.sendPhoneCode(phone, resendToken: p.resendToken);
   }
@@ -89,7 +90,7 @@ class VerifyPhoneCode extends UseCase<void, VerifyPhoneCodeParams> {
   final AuthRepository _repo;
   @override
   ResultFuture<void> call(VerifyPhoneCodeParams p) async {
-    if (p.code.length != 6) return const Left(ValidationFailure('Enter the 6-digit code.'));
+    if (p.code.length != 6) return Left(ValidationFailure(tr('Enter the 6-digit code.')));
     return _repo.verifyPhoneCode(p.verificationId, p.code);
   }
 }

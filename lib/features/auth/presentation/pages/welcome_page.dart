@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +26,7 @@ class WelcomePage extends StatelessWidget {
                 _Staggered(
                   index: 1,
                   child: Text(
-                    'Talk freely.\nConnect instantly.',
+                    tr('Talk freely.\nConnect instantly.'),
                     textAlign: TextAlign.center,
                     style: context.text.displaySmall?.copyWith(fontSize: 34, height: 1.15),
                   ),
@@ -34,7 +35,9 @@ class WelcomePage extends StatelessWidget {
                 _Staggered(
                   index: 2,
                   child: Text(
-                    'Messages, voice notes, stories, groups and crystal-clear\nvoice & video calls — all in real time.',
+                    tr(
+                      'Messages, voice notes, stories, groups and crystal-clear\nvoice & video calls — all in real time.',
+                    ),
                     textAlign: TextAlign.center,
                     style: context.text.bodyLarge?.copyWith(color: context.palette.textSecondary),
                   ),
@@ -43,7 +46,7 @@ class WelcomePage extends StatelessWidget {
                 _Staggered(
                   index: 3,
                   child: GradientButton(
-                    label: 'Continue with phone',
+                    label: tr('Continue with phone'),
                     icon: Icons.arrow_forward_rounded,
                     onPressed: () => context.push(AppRoutes.phoneAuth),
                   ),
@@ -54,11 +57,11 @@ class WelcomePage extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => context.push(AppRoutes.emailAuth),
                     icon: const Icon(Icons.alternate_email_rounded),
-                    label: const Text('Continue with email'),
+                    label: Text(tr('Continue with email')),
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('Real-time messaging • Private & secure', style: context.text.labelSmall),
+                Text(tr('Real-time messaging • Private & secure'), style: context.text.labelSmall),
                 const SizedBox(height: 12),
               ],
             ),

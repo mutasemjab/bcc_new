@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
@@ -60,7 +61,16 @@ class CallSessionBloc extends Bloc<CallSessionEvent, CallSessionState> {
 
   Future<void> _onStarted(CallSessionStarted e, Emitter<CallSessionState> emit) async {
     final myRtcUid = IdUtils.agoraUid(e.myId);
-    emit(state.copyWith(myId: e.myId, myRtcUid: myRtcUid, phase: CallPhase.connecting));
+    // Show the video layout right away for video calls (not only after joining).
+    emit(
+      state.copyWith(
+        myId: e.myId,
+        myRtcUid: myRtcUid,
+        phase: CallPhase.connecting,
+        isVideo: e.isVideo,
+        cameraOn: e.isVideo,
+      ),
+    );
 
     _docSub = _watchCall(e.callId).listen((c) => add(_CallDocChanged(c)));
     _rtcSub = _rtc.events.listen((ev) => add(_RtcEventReceived(ev)));
@@ -74,10 +84,12 @@ class CallSessionBloc extends Bloc<CallSessionEvent, CallSessionState> {
       await _rtc.initialize(video: e.isVideo);
       await _rtc.join(channel: e.callId, token: token, uid: myRtcUid, video: e.isVideo);
       emit(state.copyWith(isVideo: e.isVideo, cameraOn: e.isVideo, speakerOn: e.isVideo));
+      // Make sure my own camera preview is running for video calls.
+      if (e.isVideo) await _rtc.setCameraEnabled(true);
     } catch (err) {
       // Leave the signalling doc too, so the other side stops ringing.
       await _leaveCall((e.callId, e.myId));
-      await _endLocally(emit, 'Could not connect the call.');
+      await _endLocally(emit, tr('Could not connect the call.'));
       return;
     }
     _ringTimer = Timer(ringTimeout, () => add(const _RingTimedOut()));
@@ -89,16 +101,16 @@ class CallSessionBloc extends Bloc<CallSessionEvent, CallSessionState> {
     emit(state.copyWith(call: call));
     if (!call.isActive) {
       final reason = switch (call.status) {
-        CallStatus.declined => 'Call declined',
-        CallStatus.missed => 'No answer',
-        _ => 'Call ended',
+        CallStatus.declined => tr('Call declined'),
+        CallStatus.missed => tr('No answer'),
+        _ => tr('Call ended'),
       };
       await _endLocally(emit, reason);
       return;
     }
     // Group: everyone else left after the call started → end for me too.
     if (call.isGroup && state.phase == CallPhase.active && call.joined.where((u) => u != state.myId).isEmpty) {
-      await _hangUp(emit, 'Call ended');
+      await _hangUp(emit, tr('Call ended'));
     }
   }
 
@@ -112,7 +124,7 @@ class CallSessionBloc extends Bloc<CallSessionEvent, CallSessionState> {
           _connectedAt = DateTime.now();
           _ticker = Timer.periodic(
             const Duration(seconds: 1),
-            (_) => add(_Ticked(DateTime.now().difference(_connectedAt!))),
+            (_) => add(_Ticked(DateTime.now().difference(_connectedAt ?? DateTime.now()))),
           );
         }
         emit(state.copyWith(phase: CallPhase.active, remoteUids: {...state.remoteUids, uid}.toList()));
@@ -151,12 +163,13 @@ class CallSessionBloc extends Bloc<CallSessionEvent, CallSessionState> {
     emit(state.copyWith(speakerOn: on));
   }
 
-  Future<void> _onHangUp(CallHangUpPressed e, Emitter<CallSessionState> emit) => _hangUp(emit, 'Call ended');
+  Future<void> _onHangUp(CallHangUpPressed e, Emitter<CallSessionState> emit) => _hangUp(emit, tr('Call ended'));
 
   Future<void> _onRingTimeout(_RingTimedOut e, Emitter<CallSessionState> emit) async {
     if (state.phase == CallPhase.active || state.call == null) return;
-    await _markMissed(state.call!.id);
-    await _endLocally(emit, 'No answer');
+    final call = state.call;
+    if (call != null) await _markMissed(call.id);
+    await _endLocally(emit, tr('No answer'));
   }
 
   Future<void> _hangUp(Emitter<CallSessionState> emit, String reason) async {

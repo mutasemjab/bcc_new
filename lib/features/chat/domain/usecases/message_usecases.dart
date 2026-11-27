@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/error/failures.dart';
@@ -29,20 +30,20 @@ class SendMessage extends UseCase<void, SendMessageParams> {
   ResultFuture<void> call(SendMessageParams p) async {
     final m = p.message;
     if (m.type == MessageType.text && m.text.trim().isEmpty) {
-      return const Left(ValidationFailure('Message is empty.'));
+      return Left(ValidationFailure(tr('Message is empty.')));
     }
     if (m.type == MessageType.text && m.text.length > 4096) {
-      return const Left(ValidationFailure('Message is too long.'));
+      return Left(ValidationFailure(tr('Message is too long.')));
     }
     if (m.type == MessageType.poll) {
       final poll = m.poll;
-      if (poll == null || poll.question.trim().isEmpty) return const Left(ValidationFailure('Write a question.'));
+      if (poll == null || poll.question.trim().isEmpty) return Left(ValidationFailure(tr('Write a question.')));
       if (poll.options.where((o) => o.text.trim().isNotEmpty).length < 2) {
-        return const Left(ValidationFailure('Add at least two options.'));
+        return Left(ValidationFailure(tr('Add at least two options.')));
       }
     }
     if ((m.fileSize ?? 0) > maxFileBytes) {
-      return const Left(ValidationFailure('Files must be smaller than 100 MB.'));
+      return Left(ValidationFailure(tr('Files must be smaller than 100 MB.')));
     }
     return _repo.sendMessage(m, onProgress: p.onProgress);
   }
@@ -72,7 +73,7 @@ class EditMessage extends UseCase<void, (String chatId, String messageId, String
   final ChatRepository _repo;
   @override
   ResultFuture<void> call((String, String, String) p) async {
-    if (p.$3.trim().isEmpty) return const Left(ValidationFailure('Message is empty.'));
+    if (p.$3.trim().isEmpty) return Left(ValidationFailure(tr('Message is empty.')));
     return _repo.editMessage(p.$1, p.$2, p.$3.trim());
   }
 }

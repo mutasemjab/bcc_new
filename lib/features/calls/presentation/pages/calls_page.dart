@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -29,14 +30,14 @@ class CallsPage extends StatelessWidget {
               backgroundColor: context.theme.scaffoldBackgroundColor,
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsetsDirectional.only(start: 20, bottom: 14),
-                title: Text('Calls', style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                title: Text(tr('Calls'), style: context.text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
               ),
               actions: [
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: FilterChip(
                     selected: state.missedOnly,
-                    label: const Text('Missed'),
+                    label: Text(tr('Missed')),
                     onSelected: (_) => context.read<CallLogCubit>().toggleMissedOnly(),
                     selectedColor: AppColors.danger.withValues(alpha: 0.2),
                     side: BorderSide.none,
@@ -48,12 +49,12 @@ class CallsPage extends StatelessWidget {
             if (state.loading)
               const SliverFillRemaining(child: ChatListSkeleton(count: 6))
             else if (calls.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.call_rounded,
-                  title: 'No calls yet',
-                  message: 'Voice and video calls with your friends and groups will show up here.',
+                  title: tr('No calls yet'),
+                  message: tr('Voice and video calls with your friends and groups will show up here.'),
                 ),
               )
             else

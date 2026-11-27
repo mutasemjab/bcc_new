@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,14 +11,14 @@ enum AttachmentKind { gallery, viewOncePhoto, camera, video, document, location,
 
 /// Colourful grid of attachment options.
 Future<AttachmentKind?> showAttachmentSheet(BuildContext context) {
-  const items = [
-    (AttachmentKind.gallery, 'Gallery', Icons.photo_library_rounded, [Color(0xFF7B61FF), Color(0xFFB98BFF)]),
-    (AttachmentKind.viewOncePhoto, 'View once', Icons.looks_one_rounded, [Color(0xFF2479B5), Color(0xFF3A9AD9)]),
-    (AttachmentKind.camera, 'Camera', Icons.photo_camera_rounded, [Color(0xFFFF4D6D), Color(0xFFFF8FA3)]),
-    (AttachmentKind.video, 'Video', Icons.videocam_rounded, [Color(0xFFFF8A3D), Color(0xFFFFB27A)]),
-    (AttachmentKind.document, 'Document', Icons.description_rounded, [Color(0xFF2479B5), Color(0xFF84C4EB)]),
-    (AttachmentKind.location, 'Location', Icons.location_on_rounded, [Color(0xFF00B8A9), Color(0xFF5CE1D6)]),
-    (AttachmentKind.poll, 'Poll', Icons.poll_rounded, [Color(0xFF5A5A5C), Color(0xFF8E8E93)]),
+  final items = [
+    (AttachmentKind.gallery, tr('Gallery'), Icons.photo_library_rounded, [Color(0xFF7B61FF), Color(0xFFB98BFF)]),
+    (AttachmentKind.viewOncePhoto, tr('View once'), Icons.looks_one_rounded, [Color(0xFF2479B5), Color(0xFF3A9AD9)]),
+    (AttachmentKind.camera, tr('Camera'), Icons.photo_camera_rounded, [Color(0xFFFF4D6D), Color(0xFFFF8FA3)]),
+    (AttachmentKind.video, tr('Video'), Icons.videocam_rounded, [Color(0xFFFF8A3D), Color(0xFFFFB27A)]),
+    (AttachmentKind.document, tr('Document'), Icons.description_rounded, [Color(0xFF2479B5), Color(0xFF84C4EB)]),
+    (AttachmentKind.location, tr('Location'), Icons.location_on_rounded, [Color(0xFF00B8A9), Color(0xFF5CE1D6)]),
+    (AttachmentKind.poll, tr('Poll'), Icons.poll_rounded, [Color(0xFF5A5A5C), Color(0xFF8E8E93)]),
   ];
   return showModalBottomSheet<AttachmentKind>(
     context: context,
@@ -193,31 +194,31 @@ Future<MessageActionResult?> showMessageActions(
                     ],
                   ),
                 ),
-              if (!message.deletedForEveryone) _action(ctx, Icons.reply_rounded, 'Reply', MessageAction.reply),
+              if (!message.deletedForEveryone) _action(ctx, Icons.reply_rounded, tr('Reply'), MessageAction.reply),
               if (canReplyPrivately)
-                _action(ctx, Icons.quickreply_rounded, 'Reply privately', MessageAction.replyPrivately),
-              if (canForward) _action(ctx, Icons.shortcut_rounded, 'Forward', MessageAction.forward),
+                _action(ctx, Icons.quickreply_rounded, tr('Reply privately'), MessageAction.replyPrivately),
+              if (canForward) _action(ctx, Icons.shortcut_rounded, tr('Forward'), MessageAction.forward),
               if (!message.deletedForEveryone && message.type != MessageType.system)
                 isStarred
-                    ? _action(ctx, Icons.star_border_rounded, 'Unstar', MessageAction.unstar)
-                    : _action(ctx, Icons.star_rounded, 'Star', MessageAction.star),
+                    ? _action(ctx, Icons.star_border_rounded, tr('Unstar'), MessageAction.unstar)
+                    : _action(ctx, Icons.star_rounded, tr('Star'), MessageAction.star),
               if (message.type == MessageType.text && !message.deletedForEveryone)
-                _action(ctx, Icons.event_available_rounded, 'Add to appointments', MessageAction.addAppointment),
+                _action(ctx, Icons.event_available_rounded, tr('Add to appointments'), MessageAction.addAppointment),
               if (message.type == MessageType.text && !message.deletedForEveryone)
-                _action(ctx, Icons.copy_rounded, 'Copy', MessageAction.copy),
-              if (canEdit) _action(ctx, Icons.edit_rounded, 'Edit', MessageAction.edit),
+                _action(ctx, Icons.copy_rounded, tr('Copy'), MessageAction.copy),
+              if (canEdit) _action(ctx, Icons.edit_rounded, tr('Edit'), MessageAction.edit),
               if (canPin && !message.deletedForEveryone && message.type != MessageType.system)
                 isPinned
-                    ? _action(ctx, Icons.push_pin_outlined, 'Unpin', MessageAction.unpin)
-                    : _action(ctx, Icons.push_pin_rounded, 'Pin', MessageAction.pin),
+                    ? _action(ctx, Icons.push_pin_outlined, tr('Unpin'), MessageAction.unpin)
+                    : _action(ctx, Icons.push_pin_rounded, tr('Pin'), MessageAction.pin),
               if (isMine && !message.deletedForEveryone)
-                _action(ctx, Icons.info_outline_rounded, 'Info', MessageAction.info),
-              _action(ctx, Icons.delete_outline_rounded, 'Delete for me', MessageAction.deleteForMe, danger: true),
+                _action(ctx, Icons.info_outline_rounded, tr('Info'), MessageAction.info),
+              _action(ctx, Icons.delete_outline_rounded, tr('Delete for me'), MessageAction.deleteForMe, danger: true),
               if (canDeleteForEveryone)
                 _action(
                   ctx,
                   Icons.delete_forever_rounded,
-                  'Delete for everyone',
+                  tr('Delete for everyone'),
                   MessageAction.deleteForEveryone,
                   danger: true,
                 ),

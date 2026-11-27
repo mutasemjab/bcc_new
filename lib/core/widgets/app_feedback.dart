@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -36,11 +37,11 @@ abstract final class AppFeedback {
             title: Text(title),
             content: Text(message),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(tr('Cancel'))),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
                 style: TextButton.styleFrom(foregroundColor: destructive ? AppColors.danger : AppColors.primary),
-                child: Text(confirmLabel),
+                child: Text(tr(confirmLabel)),
               ),
             ],
           ),

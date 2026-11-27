@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../../../../core/error/failures.dart';
@@ -38,10 +39,10 @@ class StartCall extends UseCase<CallEntity, StartCallParams> {
   @override
   ResultFuture<CallEntity> call(StartCallParams p) async {
     if (p.participants.where((id) => id != p.callerId).isEmpty) {
-      return const Left(ValidationFailure('There is nobody to call.'));
+      return Left(ValidationFailure(tr('There is nobody to call.')));
     }
     if (p.participants.length > maxParticipants) {
-      return const Left(ValidationFailure('Group calls support up to $maxParticipants people.'));
+      return Left(ValidationFailure(tr('Group calls support up to {0} people.', [maxParticipants])));
     }
     return _repo.startCall(
       chatId: p.chatId,

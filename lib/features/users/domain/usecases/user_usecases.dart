@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
@@ -55,12 +56,12 @@ class SaveProfile extends UseCase<UserEntity, SaveProfileParams> {
   @override
   ResultFuture<UserEntity> call(SaveProfileParams p) async {
     final name = p.name.trim();
-    if (name.length < 2) return const Left(ValidationFailure('Please enter your name (2+ characters).'));
-    if (name.length > 40) return const Left(ValidationFailure('Name is too long.'));
+    if (name.length < 2) return Left(ValidationFailure(tr('Please enter your name (2+ characters).')));
+    if (name.length > 40) return Left(ValidationFailure(tr('Name is too long.')));
     return _repo.saveProfile(
       uid: p.uid,
       name: name,
-      about: p.about.trim().isEmpty ? 'Hey there! I am using BCC Chat.' : p.about.trim(),
+      about: p.about.trim().isEmpty ? tr('Hey there! I am using BCC Chat.') : p.about.trim(),
       avatar: p.avatar,
       email: p.email,
       phone: p.phone,

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -106,12 +107,12 @@ class _StickerPanelState extends State<StickerPanel> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.add_photo_alternate_rounded, color: AppColors.primary),
                 SizedBox(height: 4),
-                Text('Add', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(tr('Add'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -132,7 +133,7 @@ class _StickerPanelState extends State<StickerPanel> {
                 (ctx) => SafeArea(
                   child: ListTile(
                     leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
-                    title: const Text('Remove from my stickers', style: TextStyle(color: AppColors.danger)),
+                    title: Text(tr('Remove from my stickers'), style: TextStyle(color: AppColors.danger)),
                     onTap: () => Navigator.pop(ctx, true),
                   ),
                 ),

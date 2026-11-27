@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -62,15 +63,15 @@ class _NewChatView extends StatelessWidget {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            title: const Text('Join group via link'),
+            title: Text(tr('Join group via link')),
             content: TextField(
               controller: controller,
               autofocus: true,
-              decoration: const InputDecoration(hintText: 'Paste the invite link'),
+              decoration: InputDecoration(hintText: tr('Paste the invite link')),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('Open')),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
+              TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: Text(tr('Open'))),
             ],
           ),
     );
@@ -78,7 +79,7 @@ class _NewChatView extends StatelessWidget {
     if (text == null || !context.mounted) return;
     final link = GroupLinks.parse(text);
     if (link == null) {
-      AppFeedback.error(context, "That doesn't look like a BCC Chat group link.");
+      AppFeedback.error(context, tr('That doesn\'t look like a BCC Chat group link.'));
       return;
     }
     context.push(AppRoutes.joinGroup(link.$1, link.$2));
@@ -97,10 +98,10 @@ class _NewChatView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New chat'),
+        title: Text(tr('New chat')),
         actions: [
           IconButton(
-            tooltip: 'Refresh contacts',
+            tooltip: tr('Refresh contacts'),
             onPressed: sync.syncing || !sync.hasAccess ? null : () => sync.sync(full: true),
             icon: const Icon(Icons.sync_rounded),
           ),
@@ -117,7 +118,7 @@ class _NewChatView extends StatelessWidget {
                   child: TextField(
                     onChanged: context.read<UserSearchCubit>().queryChanged,
                     decoration: InputDecoration(
-                      hintText: 'Name, email or phone (+962…)',
+                      hintText: tr('Name, email or phone (+962…)'),
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon:
                           search.isLoading
@@ -144,7 +145,7 @@ class _NewChatView extends StatelessWidget {
                       decoration: const BoxDecoration(shape: BoxShape.circle, gradient: AppColors.brandGradient),
                       child: const Icon(Icons.group_add_rounded, color: Colors.white),
                     ),
-                    title: Text('New group', style: context.text.titleMedium),
+                    title: Text(tr('New group'), style: context.text.titleMedium),
                     onTap: () => context.pushReplacement(AppRoutes.newGroup),
                   ),
                 ),
@@ -157,7 +158,7 @@ class _NewChatView extends StatelessWidget {
                       decoration: BoxDecoration(shape: BoxShape.circle, color: context.palette.surfaceHigh),
                       child: const Icon(Icons.link_rounded, color: AppColors.primary),
                     ),
-                    title: Text('Join group via link', style: context.text.titleMedium),
+                    title: Text(tr('Join group via link'), style: context.text.titleMedium),
                     onTap: () => _joinViaLink(context),
                   ),
                 ),
@@ -170,8 +171,8 @@ class _NewChatView extends StatelessWidget {
                       decoration: BoxDecoration(shape: BoxShape.circle, color: context.palette.surfaceHigh),
                       child: const Icon(Icons.person_add_alt_1_rounded, color: AppColors.primary),
                     ),
-                    title: Text('Invite friends', style: context.text.titleMedium),
-                    subtitle: const Text("Contacts who don't have BCC Chat yet"),
+                    title: Text(tr('Invite friends'), style: context.text.titleMedium),
+                    subtitle: Text(tr('Contacts who don\'t have BCC Chat yet')),
                     onTap:
                         () => Navigator.of(
                           context,
@@ -189,8 +190,8 @@ class _NewChatView extends StatelessWidget {
                       ),
                       child: ListTile(
                         leading: const Icon(Icons.phone_android_rounded, color: AppColors.primary),
-                        title: const Text('Add your phone number'),
-                        subtitle: const Text('So friends who saved your number can find you'),
+                        title: Text(tr('Add your phone number')),
+                        subtitle: Text(tr('So friends who saved your number can find you')),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap:
                             () => Navigator.of(
@@ -203,7 +204,7 @@ class _NewChatView extends StatelessWidget {
                 // ── Phone contacts that use the app (cached on the device) ──
                 SliverToBoxAdapter(
                   child: _SectionHeader(
-                    'Contacts on BCC Chat',
+                    tr('Contacts on BCC Chat'),
                     trailing:
                         sync.syncing
                             ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
@@ -220,8 +221,8 @@ class _NewChatView extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                       child: Text(
                         firstSync
-                            ? 'Finding your contacts on BCC Chat…'
-                            : sync.error ?? 'None of your contacts are on BCC Chat yet.',
+                            ? tr('Finding your contacts on BCC Chat…')
+                            : sync.error ?? tr('None of your contacts are on BCC Chat yet.'),
                         style: TextStyle(color: context.palette.textSecondary),
                       ),
                     ),
@@ -241,18 +242,18 @@ class _NewChatView extends StatelessWidget {
                 ),
 
                 // ── Other people you've chatted with ──
-                if (others.isNotEmpty) const SliverToBoxAdapter(child: _SectionHeader('People you know')),
+                if (others.isNotEmpty) SliverToBoxAdapter(child: _SectionHeader(tr('People you know'))),
                 SliverList.builder(
                   itemCount: others.length,
                   itemBuilder: (_, i) => UserTile(user: others[i], onTap: () => _open(context, others[i])),
                 ),
                 if (others.isEmpty && contacts.isEmpty && !sync.syncing && sync.hasAccess)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.person_search_rounded,
-                      title: 'Find your people',
-                      message: 'Search by name, email or phone number to start chatting.',
+                      title: tr('Find your people'),
+                      message: tr('Search by name, email or phone number to start chatting.'),
                     ),
                   ),
               ] else ...[
@@ -281,7 +282,7 @@ class _NewChatView extends StatelessWidget {
             .toList();
     if (hits.isEmpty) return const [];
     return [
-      const SliverToBoxAdapter(child: _SectionHeader('Contacts')),
+      SliverToBoxAdapter(child: _SectionHeader(tr('Contacts'))),
       SliverList.builder(
         itemCount: hits.length,
         itemBuilder: (_, i) {
@@ -298,19 +299,19 @@ class _NewChatView extends StatelessWidget {
       if (search.error != null)
         SliverFillRemaining(
           hasScrollBody: false,
-          child: EmptyState(icon: Icons.wifi_off_rounded, title: 'Search failed', message: search.error!),
+          child: EmptyState(icon: Icons.wifi_off_rounded, title: tr('Search failed'), message: search.error!),
         )
       else if (!search.isLoading && results.isEmpty)
-        const SliverFillRemaining(
+        SliverFillRemaining(
           hasScrollBody: false,
           child: EmptyState(
             icon: Icons.search_off_rounded,
-            title: 'No one else found',
-            message: 'Check the spelling, or search by exact email / phone with country code.',
+            title: tr('No one else found'),
+            message: tr('Check the spelling, or search by exact email / phone with country code.'),
           ),
         )
       else ...[
-        const SliverToBoxAdapter(child: _SectionHeader('On BCC Chat')),
+        SliverToBoxAdapter(child: _SectionHeader(tr('On BCC Chat'))),
         SliverList.builder(
           itemCount: results.length,
           itemBuilder: (_, i) => UserTile(user: results[i], onTap: () => _open(context, results[i])),
@@ -333,25 +334,28 @@ class _ContactsPermissionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.contacts_rounded, color: AppColors.primary),
               SizedBox(width: 10),
-              Expanded(child: Text('See who you know', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+              Expanded(
+                child: Text(tr('See who you know'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Allow access to your contacts to find friends who already use BCC Chat. '
-            'Your contacts are only used for matching on this device.',
+            tr(
+              'Allow access to your contacts to find friends who already use BCC Chat. Your contacts are only used for matching on this device.',
+            ),
             style: TextStyle(color: context.palette.textSecondary, height: 1.35),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              FilledButton(onPressed: onAllow, child: const Text('Allow access')),
+              FilledButton(onPressed: onAllow, child: Text(tr('Allow access'))),
               const SizedBox(width: 8),
-              TextButton(onPressed: openAppSettings, child: const Text('Open settings')),
+              TextButton(onPressed: openAppSettings, child: Text(tr('Open settings'))),
             ],
           ),
         ],

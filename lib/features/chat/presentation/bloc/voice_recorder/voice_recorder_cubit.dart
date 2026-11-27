@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -51,7 +52,7 @@ class VoiceRecorderCubit extends Cubit<VoiceRecorderState> {
       return;
     }
     final dir = await getTemporaryDirectory();
-    final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final path = tr('{0}/voice_{1}.m4a', [dir.path, DateTime.now().millisecondsSinceEpoch]);
     await _recorder.start(
       const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000, sampleRate: 44100, numChannels: 1),
       path: path,
@@ -60,18 +61,22 @@ class VoiceRecorderCubit extends Cubit<VoiceRecorderState> {
     _startedAt = DateTime.now();
     emit(const VoiceRecorderState(isRecording: true));
 
-    _ampSub = _recorder.onAmplitudeChanged(const Duration(milliseconds: 90)).listen((a) {
-      // dBFS (-60..0) → 0..1
-      final normalised = ((a.current + 60) / 60).clamp(0.05, 1.0);
-      _levels.add(normalised);
+    // ~15 samples / second, each one pushed to the UI straight away so the
+    // waveform scrolls smoothly (WhatsApp-like).
+    _ampSub = _recorder.onAmplitudeChanged(const Duration(milliseconds: 65)).listen((a) {
+      _levels.add(_normalise(a.current));
+      if (isClosed || _startedAt == null) return;
+      emit(
+        VoiceRecorderState(
+          isRecording: true,
+          elapsed: DateTime.now().difference(_startedAt!),
+          levels: _levels.length > 60 ? _levels.sublist(_levels.length - 60) : List.of(_levels),
+        ),
+      );
     });
-    _ticker = Timer.periodic(const Duration(milliseconds: 200), (_) {
+    _ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
       final elapsed = DateTime.now().difference(_startedAt!);
-      if (elapsed >= maxDuration) {
-        stop();
-        return;
-      }
-      emit(VoiceRecorderState(isRecording: true, elapsed: elapsed, levels: List.of(_levels)));
+      if (elapsed >= maxDuration) stop();
     });
   }
 
@@ -97,6 +102,12 @@ class VoiceRecorderCubit extends Cubit<VoiceRecorderState> {
     _ticker?.cancel();
     await _ampSub?.cancel();
     _ampSub = null;
+  }
+
+  /// dBFS → 0..1 with more contrast: quiet room stays low, speech jumps up.
+  static double _normalise(double db) {
+    final linear = ((db + 45) / 45).clamp(0.0, 1.0);
+    return (linear * linear * 1.15).clamp(0.06, 1.0).toDouble();
   }
 
   /// Compresses the captured samples into [buckets] bars for storage.

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -135,7 +136,7 @@ class StatusBloc extends Bloc<StatusEvent, StatusState> {
     final r = await _postText((uid: state.me, text: e.text, color: e.color));
     r.match(
       (f) => emit(state.copyWith(posting: false, message: f.message)),
-      (_) => emit(state.copyWith(posting: false, message: 'Status shared')),
+      (_) => emit(state.copyWith(posting: false, message: tr('Status shared'))),
     );
   }
 
@@ -144,7 +145,7 @@ class StatusBloc extends Bloc<StatusEvent, StatusState> {
     final r = await _postImage((uid: state.me, image: e.image, caption: e.caption));
     r.match(
       (f) => emit(state.copyWith(posting: false, message: f.message)),
-      (_) => emit(state.copyWith(posting: false, message: 'Status shared')),
+      (_) => emit(state.copyWith(posting: false, message: tr('Status shared'))),
     );
   }
 

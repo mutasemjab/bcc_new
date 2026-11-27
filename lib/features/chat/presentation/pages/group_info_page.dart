@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,7 @@ import '../../domain/usecases/group_usecases.dart';
 import '../bloc/group/group_info_cubit.dart';
 import '../../../../core/utils/id_utils.dart';
 import '../chat_actions.dart';
+import 'media_viewer_page.dart';
 import '../email_invites.dart';
 import '../widgets/group_identity_widgets.dart';
 import 'create_group_page.dart';
@@ -70,8 +72,8 @@ class _GroupInfoView extends StatelessWidget {
             title: Text(title),
             content: TextField(controller: controller, autofocus: true, maxLines: null),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('Save')),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('Cancel'))),
+              TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: Text(tr('Save'))),
             ],
           ),
     );
@@ -90,11 +92,11 @@ class _GroupInfoView extends StatelessWidget {
                 builder:
                     (ctx, setState) => Scaffold(
                       appBar: AppBar(
-                        title: const Text('Invite members'),
+                        title: Text(tr('Invite members')),
                         actions: [
                           TextButton(
                             onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, selected),
-                            child: Text('Invite${selected.isEmpty ? '' : ' (${selected.length})'}'),
+                            child: Text(tr('Invite{0}', [selected.isEmpty ? '' : ' (${selected.length})'])),
                           ),
                         ],
                       ),
@@ -124,17 +126,18 @@ class _GroupInfoView extends StatelessWidget {
     final chat = cubit.state.chat!;
     final send = await AppFeedback.confirm(
       context,
-      title: 'Invitations added',
-      message:
-          '${res.existing} already on BCC Chat (they got the invitation in the app) • '
-          '${res.pending} without the app yet.\n\nSend them an invitation email now from your email app?',
-      confirmLabel: 'Send email',
+      title: tr('Invitations added'),
+      message: tr(
+        '{0} already on BCC Chat (they got the invitation in the app) • {1} without the app yet.\n\nSend them an invitation email now from your email app?',
+        [res.existing, res.pending],
+      ),
+      confirmLabel: tr('Send email'),
     );
     if (!send || !context.mounted) return;
     await sendInvitationEmails(
       context,
       emails: emails,
-      groupName: chat.name ?? 'Group',
+      groupName: chat.name ?? tr('Group'),
       inviterName: cubit.myDisplayName,
       chatId: chat.id,
       inviteCode: chat.inviteCode,
@@ -155,7 +158,7 @@ class _GroupInfoView extends StatelessWidget {
                 if (cubit.isAdmin && !chat.isAnonymous(user.id))
                   ListTile(
                     leading: const Icon(Icons.person_rounded),
-                    title: Text('View ${user.name.split(' ').first}'),
+                    title: Text(tr('View {0}', [user.name.split(' ').first])),
                     onTap: () {
                       Navigator.pop(ctx);
                       context.push(AppRoutes.userProfile(user.id));
@@ -165,7 +168,7 @@ class _GroupInfoView extends StatelessWidget {
                 if (!chat.isAnonymous(user.id) && !chat.isAnonymous(cubit.me.id))
                   ListTile(
                     leading: const Icon(Icons.chat_bubble_outline_rounded),
-                    title: Text('Message ${user.name.split(' ').first}'),
+                    title: Text(tr('Message {0}', [user.name.split(' ').first])),
                     onTap: () {
                       Navigator.pop(ctx);
                       context.push(AppRoutes.conversation(IdUtils.directChatId(cubit.me.id, user.id)));
@@ -174,10 +177,10 @@ class _GroupInfoView extends StatelessWidget {
                 if (cubit.isAdmin) ...[
                   ListTile(
                     leading: Icon(isAdmin ? Icons.remove_moderator_rounded : Icons.add_moderator_rounded),
-                    title: Text(isAdmin ? 'Dismiss as admin' : 'Make group admin'),
+                    title: Text(isAdmin ? tr('Dismiss as admin') : tr('Make group admin')),
                     subtitle:
                         !isAdmin && chat.isAnonymous(user.id)
-                            ? const Text('Must reveal their identity first — admins are public')
+                            ? Text(tr('Must reveal their identity first — admins are public'))
                             : null,
                     onTap: () {
                       Navigator.pop(ctx);
@@ -186,7 +189,7 @@ class _GroupInfoView extends StatelessWidget {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_remove_rounded, color: AppColors.danger),
-                    title: const Text('Remove from group', style: TextStyle(color: AppColors.danger)),
+                    title: Text(tr('Remove from group'), style: TextStyle(color: AppColors.danger)),
                     onTap: () {
                       Navigator.pop(ctx);
                       cubit.remove(user);
@@ -224,7 +227,12 @@ class _GroupInfoView extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.edit_rounded),
                       onPressed:
-                          () => _editText(context, title: 'Group name', initial: chat.name ?? '', onSave: cubit.rename),
+                          () => _editText(
+                            context,
+                            title: tr('Group name'),
+                            initial: chat.name ?? '',
+                            onSave: cubit.rename,
+                          ),
                     ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
@@ -242,15 +250,22 @@ class _GroupInfoView extends StatelessWidget {
                         children: [
                           const SizedBox(height: 30),
                           Pressable(
+                            // Admins: change the photo (long-press to view). Others: view it.
                             onTap:
                                 cubit.isAdmin
                                     ? () async {
                                       final f = await sl<MediaPickerService>().pickImage();
                                       if (f != null) await cubit.setPhoto(f);
                                     }
-                                    : null,
+                                    : chat.photoUrl == null
+                                    ? null
+                                    : () => MediaViewerPage.open(context, url: chat.photoUrl!, heroTag: 'group-photo'),
+                            onLongPress:
+                                chat.photoUrl == null
+                                    ? null
+                                    : () => MediaViewerPage.open(context, url: chat.photoUrl!, heroTag: 'group-photo'),
                             child: AppAvatar(
-                              name: chat.name ?? 'Group',
+                              name: chat.name ?? tr('Group'),
                               imageUrl: chat.photoUrl,
                               size: 120,
                               isGroup: true,
@@ -258,10 +273,10 @@ class _GroupInfoView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text(chat.name ?? 'Group', style: context.text.headlineSmall),
+                          Text(chat.name ?? tr('Group'), style: context.text.headlineSmall),
                           const SizedBox(height: 4),
                           Text(
-                            'Group • ${chat.participants.length} members',
+                            tr('Group • {0} members', [chat.participants.length]),
                             style: TextStyle(color: context.palette.textSecondary),
                           ),
                         ],
@@ -277,7 +292,7 @@ class _GroupInfoView extends StatelessWidget {
                     children: [
                       _ActionButton(
                         icon: Icons.call_rounded,
-                        label: 'Voice',
+                        label: tr('Voice'),
                         onTap:
                             amIMember
                                 ? () => CallLauncher.start(
@@ -291,7 +306,7 @@ class _GroupInfoView extends StatelessWidget {
                       const SizedBox(width: 12),
                       _ActionButton(
                         icon: Icons.videocam_rounded,
-                        label: 'Video',
+                        label: tr('Video'),
                         onTap:
                             amIMember
                                 ? () => CallLauncher.start(
@@ -305,7 +320,7 @@ class _GroupInfoView extends StatelessWidget {
                       const SizedBox(width: 12),
                       _ActionButton(
                         icon: Icons.person_add_alt_1_rounded,
-                        label: 'Invite',
+                        label: tr('Invite'),
                         onTap: cubit.isAdmin ? () => _addMembers(context, cubit) : null,
                       ),
                     ],
@@ -316,17 +331,19 @@ class _GroupInfoView extends StatelessWidget {
                 child: _Card(
                   child: ListTile(
                     title: Text(
-                      (chat.description ?? '').isEmpty ? 'Add group description' : chat.description!,
+                      (chat.description ?? '').isEmpty ? tr('Add group description') : chat.description!,
                       style: TextStyle(color: (chat.description ?? '').isEmpty ? AppColors.primary : null),
                     ),
                     subtitle: Text(
-                      'Created by ${chat.createdBy == null ? '—' : state.displayUser(chat.createdBy!)?.name ?? '—'}',
+                      tr('Created by {0}', [
+                        chat.createdBy == null ? '—' : state.displayUser(chat.createdBy!)?.name ?? '—',
+                      ]),
                     ),
                     onTap:
                         cubit.isAdmin
                             ? () => _editText(
                               context,
-                              title: 'Description',
+                              title: tr('Description'),
                               initial: chat.description ?? '',
                               onSave: cubit.setDescription,
                             )
@@ -338,7 +355,7 @@ class _GroupInfoView extends StatelessWidget {
                 child: _Card(
                   child: ListTile(
                     leading: const Icon(Icons.perm_media_rounded, color: AppColors.primary),
-                    title: const Text('Media, links and docs'),
+                    title: Text(tr('Media, links and docs')),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.push(AppRoutes.chatMedia(chat.id)),
                   ),
@@ -356,7 +373,7 @@ class _GroupInfoView extends StatelessWidget {
                                 : Icons.notifications_rounded,
                             color: AppColors.primary,
                           ),
-                          title: const Text('Mute notifications'),
+                          title: Text(tr('Mute notifications')),
                           trailing: Switch(
                             value: chat.isMutedFor(cubit.me.id),
                             onChanged: (_) => ChatActions.toggleMute(context, chat, cubit.me.id),
@@ -364,7 +381,7 @@ class _GroupInfoView extends StatelessWidget {
                         ),
                         ListTile(
                           leading: const Icon(Icons.cleaning_services_rounded, color: AppColors.primary),
-                          title: const Text('Clear chat'),
+                          title: Text(tr('Clear chat')),
                           onTap: () => ChatActions.clearChat(context, chat.id, cubit.me.id),
                         ),
                       ],
@@ -377,9 +394,9 @@ class _GroupInfoView extends StatelessWidget {
                   child: _Card(
                     child: SwitchListTile(
                       secondary: const Icon(Icons.lock_rounded, color: AppColors.primary),
-                      title: const Text('Secret group'),
-                      subtitle: const Text(
-                        "Members can't share the invite link, and members who leave can't rejoin on their own.",
+                      title: Text(tr('Secret group')),
+                      subtitle: Text(
+                        tr('Members can\'t share the invite link, and members who leave can\'t rejoin on their own.'),
                       ),
                       value: chat.secret,
                       onChanged: cubit.setSecret,
@@ -391,8 +408,8 @@ class _GroupInfoView extends StatelessWidget {
                   child: _Card(
                     child: ListTile(
                       leading: const Icon(Icons.alternate_email_rounded, color: AppColors.primary),
-                      title: const Text('Invite by email'),
-                      subtitle: const Text("Also for people who don't have the app yet"),
+                      title: Text(tr('Invite by email')),
+                      subtitle: Text(tr('Also for people who don\'t have the app yet')),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => _inviteByEmail(context, cubit),
                     ),
@@ -403,9 +420,9 @@ class _GroupInfoView extends StatelessWidget {
                   child: _Card(
                     child: ListTile(
                       leading: const Icon(Icons.link_rounded, color: AppColors.primary),
-                      title: const Text('Invite via link'),
+                      title: Text(tr('Invite via link')),
                       subtitle: Text(
-                        chat.inviteCode == null ? 'Create a link anyone can use to join' : 'Link is active',
+                        chat.inviteCode == null ? tr('Create a link anyone can use to join') : tr('Link is active'),
                       ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => showInviteLinkSheet(context, cubit),
@@ -417,7 +434,7 @@ class _GroupInfoView extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
                     child: Text(
-                      '${chat.pendingInviteCount} PENDING INVITATIONS',
+                      tr('{0} PENDING INVITATIONS', [chat.pendingInviteCount]),
                       style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.1),
                     ),
                   ),
@@ -430,17 +447,17 @@ class _GroupInfoView extends StatelessWidget {
                           for (final u in state.invitedUsers())
                             UserTile(
                               user: u,
-                              subtitle: 'Invited • waiting for answer',
-                              trailing: TextButton(onPressed: () => cubit.cancelInvite(u), child: const Text('Cancel')),
+                              subtitle: tr('Invited • waiting for answer'),
+                              trailing: TextButton(onPressed: () => cubit.cancelInvite(u), child: Text(tr('Cancel'))),
                             ),
                           for (final e in chat.invitedEmails)
                             ListTile(
                               leading: const CircleAvatar(child: Icon(Icons.alternate_email_rounded)),
                               title: Text(e, maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: const Text('Invited by email • no account yet'),
+                              subtitle: Text(tr('Invited by email • no account yet')),
                               trailing: TextButton(
                                 onPressed: () => cubit.cancelEmailInvite(e),
-                                child: const Text('Cancel'),
+                                child: Text(tr('Cancel')),
                               ),
                             ),
                         ],
@@ -455,8 +472,8 @@ class _GroupInfoView extends StatelessWidget {
                         leading: const Icon(Icons.hourglass_top_rounded),
                         title: Text(
                           chat.pendingInviteCount == 1
-                              ? '1 person invited — waiting to join'
-                              : '${chat.pendingInviteCount} people invited — waiting to join',
+                              ? tr('1 person invited — waiting to join')
+                              : tr('{0} people invited — waiting to join', [chat.pendingInviteCount]),
                         ),
                       ),
                     ),
@@ -466,7 +483,7 @@ class _GroupInfoView extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
                   child: Text(
-                    '${members.length} MEMBERS',
+                    tr('{0} MEMBERS', [members.length]),
                     style: context.text.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.1),
                   ),
                 ),
@@ -480,9 +497,9 @@ class _GroupInfoView extends StatelessWidget {
                           user: m,
                           subtitle:
                               m.id == cubit.me.id
-                                  ? (chat.isAnonymous(m.id) ? 'You • anonymous' : 'You')
+                                  ? (chat.isAnonymous(m.id) ? tr('You • anonymous') : tr('You'))
                                   : chat.isAnonymous(m.id)
-                                  ? 'Anonymous member'
+                                  ? tr('Anonymous member')
                                   : cubit.isAdmin
                                   ? [m.phone, m.email].whereType<String>().join(' • ')
                                   : '',
@@ -495,8 +512,8 @@ class _GroupInfoView extends StatelessWidget {
                                       color: AppColors.primary.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text(
-                                      'Admin',
+                                    child: Text(
+                                      tr('Admin'),
                                       style: TextStyle(
                                         color: AppColors.primary,
                                         fontSize: 11.5,
@@ -515,11 +532,11 @@ class _GroupInfoView extends StatelessWidget {
                   child: _Card(
                     child: ListTile(
                       leading: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
-                      title: const Text(
-                        'Delete group',
+                      title: Text(
+                        tr('Delete group'),
                         style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
                       ),
-                      subtitle: const Text('This group has ended. Remove it from your chats.'),
+                      subtitle: Text(tr('This group has ended. Remove it from your chats.')),
                       onTap: () => ChatActions.deleteChat(context, chat.id, cubit.me.id),
                     ),
                   ),
@@ -530,23 +547,24 @@ class _GroupInfoView extends StatelessWidget {
                     child: ListTile(
                       leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
                       title: Text(
-                        cubit.isOwner ? 'Exit and end group' : 'Exit group',
+                        cubit.isOwner ? tr('Exit and end group') : tr('Exit group'),
                         style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
                       ),
                       subtitle:
-                          cubit.isOwner ? const Text('You created this group — leaving ends it for everyone') : null,
+                          cubit.isOwner ? Text(tr('You created this group — leaving ends it for everyone')) : null,
                       onTap: () async {
                         final ok = await AppFeedback.confirm(
                           context,
-                          title: cubit.isOwner ? 'End "${chat.name}"?' : 'Exit "${chat.name}"?',
+                          title: cubit.isOwner ? tr('End "{0}"?', [chat.name]) : tr('Exit "{0}"?', [chat.name]),
                           message:
                               cubit.isOwner
-                                  ? 'You are the group owner. Leaving ends the group for everyone — nobody can '
-                                      'send messages in it anymore.'
+                                  ? tr(
+                                    'You are the group owner. Leaving ends the group for everyone — nobody can send messages in it anymore.',
+                                  )
                                   : chat.secret
-                                  ? 'This is a secret group: you will need an admin to invite you back.'
-                                  : 'You can rejoin later from the chat, unless the group becomes secret.',
-                          confirmLabel: cubit.isOwner ? 'End group' : 'Exit',
+                                  ? tr('This is a secret group: you will need an admin to invite you back.')
+                                  : tr('You can rejoin later from the chat, unless the group becomes secret.'),
+                          confirmLabel: cubit.isOwner ? tr('End group') : tr('Exit'),
                           destructive: true,
                         );
                         if (ok) await cubit.leave();

@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/di.dart';
@@ -38,7 +39,7 @@ class _LinkPhonePageState extends State<LinkPhonePage> {
       _country.dialCode,
     );
     if (phone == null) {
-      AppFeedback.error(context, 'Enter a valid phone number.');
+      AppFeedback.error(context, tr('Enter a valid phone number.'));
       return;
     }
     setState(() => _busy = true);
@@ -78,7 +79,7 @@ class _LinkPhonePageState extends State<LinkPhonePage> {
   }
 
   void _done() {
-    AppFeedback.info(context, 'Phone number added — friends can now find you');
+    AppFeedback.info(context, tr('Phone number added — friends can now find you'));
     Navigator.of(context).pop(true);
   }
 
@@ -86,19 +87,20 @@ class _LinkPhonePageState extends State<LinkPhonePage> {
   Widget build(BuildContext context) {
     final secondary = TextStyle(color: context.palette.textSecondary, height: 1.4);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.current == null ? 'Add phone number' : 'Change phone number')),
+      appBar: AppBar(title: Text(widget.current == null ? tr('Add phone number') : tr('Change phone number'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           if (_verificationId == null) ...[
             Text(
-              'Add your number so friends who saved it in their contacts can find you on BCC Chat. '
-              "We'll send a code by SMS to confirm it's yours.",
+              tr(
+                'Add your number so friends who saved it in their contacts can find you on BCC Chat. We\'ll send a code by SMS to confirm it\'s yours.',
+              ),
               style: secondary,
             ),
             if (widget.current != null) ...[
               const SizedBox(height: 8),
-              Text('Current number: ${widget.current}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(tr('Current number: {0}', [widget.current]), style: const TextStyle(fontWeight: FontWeight.w600)),
             ],
             const SizedBox(height: 20),
             Row(
@@ -122,9 +124,9 @@ class _LinkPhonePageState extends State<LinkPhonePage> {
               ],
             ),
             const SizedBox(height: 24),
-            GradientButton(label: 'Send code', icon: Icons.sms_rounded, isLoading: _busy, onPressed: _send),
+            GradientButton(label: tr('Send code'), icon: Icons.sms_rounded, isLoading: _busy, onPressed: _send),
           ] else ...[
-            Text('Enter the 6-digit code sent to', style: secondary),
+            Text(tr('Enter the 6-digit code sent to'), style: secondary),
             const SizedBox(height: 4),
             Text(_phone ?? '', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
             const SizedBox(height: 24),
@@ -133,7 +135,7 @@ class _LinkPhonePageState extends State<LinkPhonePage> {
             if (_busy) const Center(child: CircularProgressIndicator()),
             TextButton(
               onPressed: _busy ? null : () => setState(() => _verificationId = null),
-              child: const Text('Change number', style: TextStyle(color: AppColors.primary)),
+              child: Text(tr('Change number'), style: TextStyle(color: AppColors.primary)),
             ),
           ],
         ],

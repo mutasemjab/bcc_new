@@ -12,6 +12,7 @@ import '../core/services/media_picker_service.dart';
 import '../core/services/phone_linker.dart';
 import '../core/services/wallpaper_store.dart';
 import '../core/services/push_service.dart';
+import '../core/l10n/l10n.dart';
 import '../core/theme/appearance_settings.dart';
 import '../core/theme/theme_cubit.dart';
 import '../features/auth/data/datasources/auth_remote_data_source.dart';
@@ -83,6 +84,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => ContactsService())
     ..registerLazySingleton(() => WallpaperStore(sl()))
     ..registerLazySingleton(() => AppearanceSettings(sl()))
+    ..registerLazySingleton(() => L10n(sl()))
     ..registerLazySingleton(() => PhoneLinker(sl(), sl()))
     ..registerLazySingleton(() => StarredStore(sl()))
     ..registerLazySingleton(() => EmailInviteClaimer(sl(), sl()))

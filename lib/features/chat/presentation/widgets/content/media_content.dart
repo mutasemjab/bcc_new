@@ -1,3 +1,4 @@
+import 'package:bcc_chat/core/l10n/l10n.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -96,7 +97,7 @@ class VideoContent extends StatelessWidget {
                     const Icon(Icons.videocam_rounded, color: Colors.white70, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      message.fileSize == null ? 'Video' : Formatters.fileSize(message.fileSize!),
+                      message.fileSize == null ? tr('Video') : Formatters.fileSize(message.fileSize!),
                       style: const TextStyle(color: Colors.white70, fontSize: 11.5),
                     ),
                   ],
@@ -130,7 +131,7 @@ class FileContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = message.fileName ?? 'Document';
+    final name = message.fileName ?? tr('Document');
     final (icon, color) = _iconFor(name);
     final fg = isMine ? Colors.white : context.palette.incomingText;
     return GestureDetector(
@@ -200,6 +201,8 @@ class LocationContent extends StatelessWidget {
     if (lat == null || lng == null) return const SizedBox.shrink();
     final point = LatLng(lat, lng);
     return GestureDetector(
+      // The map preview ignores touches, so catch taps over the whole card.
+      behavior: HitTestBehavior.opaque,
       onTap: _open,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(_mediaRadius),
@@ -244,17 +247,17 @@ class LocationContent extends StatelessWidget {
                       colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Icon(Icons.near_me_rounded, color: Colors.white, size: 16),
                       SizedBox(width: 6),
                       Text(
-                        'Shared location',
+                        tr('Shared location'),
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                       Spacer(),
                       Text(
-                        'Open',
+                        tr('Open'),
                         style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: 13),
                       ),
                     ],
